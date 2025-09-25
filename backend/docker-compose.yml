@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # TypeAware Backend API
+  typeaware-api:
+    build: .
+    container_name: typeaware-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=mongodb://typeaware-mongo:27017/typeaware
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=7d
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - BCRYPT_ROUNDS=12
+      - DEFAULT_ADMIN_EMAIL=${DEFAULT_ADMIN_EMAIL:-admin@typeaware.com}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-admin123456}
+    depends_on:
+      - typeaware-mongo
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - typeaware-network
+    healthcheck:
+      test: ["CMD", "node", "scripts/healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MongoDB Database
+  typeaware-mongo:
+    image: mongo:6.0
+    container_name: typeaware-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=typeaware
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-password123}
+    volumes:
+      - typeaware-db-data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - typeaware-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis for caching (optional)
+  typeaware-redis:
+    image: redis:7-alpine
+    container_name: typeaware-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - typeaware-redis-data:/data
+    networks:
+      - typeaware-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Nginx reverse proxy (optional)
+  typeaware-nginx:
+    image: nginx:alpine
+    container_name: typeaware-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - typeaware-api
+    networks:
+      - typeaware-network
+
+# Named volumes for data persistence
+volumes:
+  typeaware-db-data:
+    driver: local
+  typeaware-redis-data:
+    driver: local
+
+# Custom network
+networks:
+  typeaware-network:
+    driver: bridge
