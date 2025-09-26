@@ -69,3 +69,15 @@ uploads/
 # Backup files
 *.backup
 *.bak
+
+# Build outputs
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Frontend frameworks (React/Next.js/etc.)
+.cache/
+.next/
+out/
