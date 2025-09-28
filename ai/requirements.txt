@@ -1,0 +1,86 @@
+# TypeAware AI Requirements
+# Core Python dependencies for the AI detection system
+
+# Data processing and analysis
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Text processing and NLP
+nltk>=3.7
+textblob>=0.17.1
+fuzzywuzzy>=0.18.0
+python-levenshtein>=0.12.2
+
+# Machine Learning (optional, for future enhancements)
+scikit-learn>=1.0.0
+
+# Web and API support
+requests>=2.26.0
+urllib3>=1.26.0
+
+# Database connectivity (for backend integration)
+pymongo>=4.0.0
+motor>=2.5.0  # Async MongoDB driver
+
+# Async processing
+asyncio>=3.4.3
+aiohttp>=3.8.0
+
+# Performance and monitoring
+psutil>=5.8.0
+memory-profiler>=0.60.0
+
+# Logging and debugging
+coloredlogs>=15.0
+python-json-logger>=2.0.0
+
+# Configuration management
+pyyaml>=6.0
+python-dotenv>=0.19.0
+
+# Data validation
+pydantic>=1.9.0
+marshmallow>=3.14.0
+
+# Caching
+redis>=4.0.0  # Optional, for advanced caching
+
+# Testing (development)
+pytest>=6.2.0
+pytest-asyncio>=0.18.0
+pytest-cov>=3.0.0
+
+# Documentation (development)
+sphinx>=4.0.0
+sphinx-rtd-theme>=1.0.0
+
+# Code quality (development)
+flake8>=4.0.0
+black>=22.0.0
+isort>=5.10.0
+
+# Unicode and text processing
+unicodedata2>=14.0.0
+unidecode>=1.3.0
+
+# Timing and scheduling
+apscheduler>=3.8.0
+
+# HTTP client for API calls
+httpx>=0.23.0
+
+# JSON processing
+orjson>=3.6.0  # Fast JSON processing
+
+# Regex enhancements
+regex>=2022.1.18
+
+# Language detection (optional)
+langdetect>=1.0.9
+
+# Profanity detection enhancement (optional)
+better-profanity>=0.7.0
+
+# Text similarity
+python-Levenshtein>=0.12.2
+jellyfish>=0.8

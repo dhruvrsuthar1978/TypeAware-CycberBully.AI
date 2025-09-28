@@ -92,6 +92,31 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
+  },
+  refreshToken: {
+    type: String,
+    select: false // Don't return in queries by default
+  },
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetExpiry: {
+    type: Date,
+    select: false
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  lastLoginAt: Date,
+  loginCount: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

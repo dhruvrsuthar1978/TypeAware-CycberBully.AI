@@ -187,17 +187,23 @@ const generateApiKey = (userId, scope = 'read') => {
   );
 };
 
-/** 
+/**
  * Verify API key
  * @param {string} apiKey - API key to verify
- * @returns {object} Decoded token payload
+ * @returns {object} Decoded API key payload
  */
 const verifyApiKey = (apiKey) => {
   try {
-    return jwt.verify(apiKey, process.env.JWT_SECRET, {
+    const decoded = jwt.verify(apiKey, process.env.JWT_SECRET, {
       issuer: 'typeaware-api',
       audience: 'typeaware-external'
     });
+
+    if (decoded.type !== 'api_key') {
+      throw new Error('Invalid API key type');
+    }
+
+    return decoded;
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       throw new Error('API key has expired');
@@ -207,6 +213,121 @@ const verifyApiKey = (apiKey) => {
       throw new Error('API key verification failed');
     }
   }
+};
+
+/**
+ * Generate temporary token for password reset, email verification, etc.
+ * @param {string} userId - User ID
+ * @param {string} purpose - Token purpose ('password_reset', 'email_verify', etc.)
+ * @param {string} expiresIn - Token expiration time
+ * @returns {string} Temporary token
+ */
+const generateTemporaryToken = (userId, purpose, expiresIn = '1h') => {
+  const payload = {
+    userId,
+    type: 'temporary',
+    purpose,
+    iat: Math.floor(Date.now() / 1000),
+    jti: crypto.randomUUID()
+  };
+
+  return jwt.sign(
+    payload,
+    process.env.JWT_SECRET,
+    { 
+      expiresIn,
+      issuer: 'typeaware-api',
+      audience: 'typeaware-temp'
+    }
+  );
+};
+
+/**
+ * Verify temporary token
+ * @param {string} token - Temporary token to verify
+ * @param {string} expectedPurpose - Expected token purpose
+ * @returns {object} Decoded token payload
+ */
+const verifyTemporaryToken = (token, expectedPurpose) => {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      issuer: 'typeaware-api',
+      audience: 'typeaware-temp'
+    });
+
+    if (decoded.type !== 'temporary') {
+      throw new Error('Invalid token type');
+    }
+
+    if (decoded.purpose !== expectedPurpose) {
+      throw new Error('Token purpose mismatch');
+    }
+
+    return decoded;
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      throw new Error('Token has expired');
+    } else if (error.name === 'JsonWebTokenError') {
+      throw new Error('Invalid token');
+    } else {
+      throw new Error('Token verification failed');
+    }
+  }
+};
+
+/**
+ * Generate secure random token (non-JWT)
+ * @param {number} length - Token length in bytes
+ * @returns {string} Random token
+ */
+const generateSecureToken = (length = 32) => {
+  return crypto.randomBytes(length).toString('hex');
+};
+
+/**
+ * Hash token for storage (one-way)
+ * @param {string} token - Token to hash
+ * @returns {string} Hashed token
+ */
+const hashToken = (token) => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+/**
+ * Get time until token expires
+ * @param {string} token - JWT token
+ * @returns {number|null} Seconds until expiration, null if expired or invalid
+ */
+const getTimeUntilExpiration = (token) => {
+  try {
+    const decoded = jwt.decode(token);
+    if (!decoded || !decoded.exp) {
+      return null;
+    }
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    const timeLeft = decoded.exp - currentTime;
+    
+    return timeLeft > 0 ? timeLeft : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Check if token needs refresh (expires within threshold)
+ * @param {string} token - JWT token to check
+ * @param {number} thresholdHours - Hours before expiration to consider refresh needed
+ * @returns {boolean} True if token should be refreshed
+ */
+const needsRefresh = (token, thresholdHours = 24) => {
+  const timeLeft = getTimeUntilExpiration(token);
+  if (!timeLeft) {
+    return true; // Already expired or invalid
+  }
+
+  const thresholdSeconds = thresholdHours * 60 * 60;
+  return timeLeft < thresholdSeconds;
 };
 
 module.exports = {
@@ -219,5 +340,11 @@ module.exports = {
   isTokenExpired,
   getTokenExpiration,
   generateApiKey,
-  verifyApiKey
+  verifyApiKey,
+  generateTemporaryToken,
+  verifyTemporaryToken,
+  generateSecureToken,
+  hashToken,
+  getTimeUntilExpiration,
+  needsRefresh
 };
