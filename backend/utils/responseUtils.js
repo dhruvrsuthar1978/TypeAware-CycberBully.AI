@@ -16,7 +16,7 @@ const createResponse = (message, data = null, meta = {}) => {
     response.data = data;
   }
 
-  if (Object.keys(meta).length > 0) {
+  if (meta && typeof meta === 'object' && Object.keys(meta).length > 0) {
     response.meta = meta;
   }
 

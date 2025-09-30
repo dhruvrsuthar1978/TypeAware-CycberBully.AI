@@ -1,67 +1,62 @@
-#!/usr/bin/env python3
-"""
-Quick start server for TypeAware AI API
-Run with: python ai/run_server.py
-"""
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import List
+from ai.detection.content_detection_engine import ContentDetectionEngine
+from ai.detection.obfuscation_detector import ObfuscationDetector
+from ai.detection.fuzzy_matcher import FuzzyMatcher
+from ai.detection.pattern_analyzer import PatternAnalyzer
+from ai.nlp.sentiment_analyzer import SentimentAnalyzer
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Initialize FastAPI
+app = FastAPI(title="TypeAware AI API", version="1.0.0")
 
-from ai.integration.api_interface import APIInterface, app
-from ai.utils.config import Config
-from ai.utils.logger import setup_logger
-import uvicorn
+# Load models/services
+content_engine = ContentDetectionEngine()
+obfuscation_detector = ObfuscationDetector()
+fuzzy_matcher = FuzzyMatcher(min_similarity=0.70)
+pattern_analyzer = PatternAnalyzer()
+sentiment_analyzer = SentimentAnalyzer()
 
-def main():
-    """Main entry point"""
+# Request / Response models
+class PredictRequest(BaseModel):
+    text: str
 
-    # Setup logging
-    logger = setup_logger('typeaware_server')
+class PredictResponse(BaseModel):
+    text: str
+    toxicity_score: float
+    sentiment: str
+    flagged: bool
+    reasons: List[str]
 
-    # Load configuration
-    config = Config.load()
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "TypeAware AI"}
 
-    logger.info("Starting TypeAware AI Server...")
-    logger.info(f"MongoDB URL: {config['mongodb_url']}")
-    logger.info(f"API Host: {config['api_host']}:{config['api_port']}")
+@app.post("/predict", response_model=PredictResponse)
+async def predict(req: PredictRequest):
+    text = req.text
 
-    # Create API interface
-    api = APIInterface({
-        'ai_config': {
-            'blocking_threshold': config['blocking_threshold'],
-            'high_risk_threshold': config['high_risk_threshold'],
-            'enable_stream_processing': config['enable_stream_processing']
-        },
-        'database': {
-            'mongodb_url': config['mongodb_url'],
-            'database_name': config['database_name']
-        },
-        'cors_origins': ["*"]  # Allow all origins for development
-    })
+    toxicity_score = content_engine.analyze(text)
+    sentiment = sentiment_analyzer.analyze(text)
+    obfuscation = obfuscation_detector.detect(text)
+    patterns = pattern_analyzer.find_patterns(text)
+    fuzzy_matches = fuzzy_matcher.match(text)
 
-    try:
-        if config.get("env", "dev") == "prod":
-            # Production mode: multiple workers, no reload
-            uvicorn.run(
-                "ai.integration.api_interface:app",
-                host=config['api_host'],
-                port=config['api_port'],
-                workers=4,
-                reload=False
-            )
-        else:
-            # Development mode: single worker, reload enabled
-            api.run(
-                host=config['api_host'],
-                port=config['api_port'],
-                reload=True
-            )
-    except KeyboardInterrupt:
-        logger.info("Server stopped by user")
-    except Exception as e:
-        logger.error(f"Server error: {e}")
-        sys.exit(1)
+    flagged = toxicity_score > 0.7 or obfuscation or bool(patterns)
+    reasons = []
+    if toxicity_score > 0.7:
+        reasons.append("High toxicity")
+    if obfuscation:
+        reasons.append("Obfuscation detected")
+    if patterns:
+        reasons.append("Suspicious patterns found")
+    if fuzzy_matches:
+        reasons.append("Possible fuzzy match")
 
-if __name__ == "__main__":
-    main()
+    return PredictResponse(
+        text=text,
+        toxicity_score=toxicity_score,
+        sentiment=sentiment,
+        flagged=flagged,
+        reasons=reasons
+    )

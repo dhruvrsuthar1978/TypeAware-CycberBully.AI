@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const axios = require('axios'); // 👉 Added for AI integration
 require('dotenv').config();
 
 // Import configurations and utilities
@@ -14,9 +15,9 @@ const rateLimitingService = require('./middleware/rateLimiting');
 
 // Import routes (fixed file names)
 const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/user');          // ✅ fixed
-const reportRoutes = require('./routes/reports');     // ✅ fixed
-const adminRoutes = require('./routes/admin');        // ✅ fixed
+const userRoutes = require('./routes/user');
+const reportRoutes = require('./routes/reports');
+const adminRoutes = require('./routes/admin');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const extensionRoutes = require('./routes/extensionRoutes');
 
@@ -30,7 +31,6 @@ const app = express();
 // SECURITY & MIDDLEWARE CONFIGURATION
 // ============================================================================
 
-// Security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -45,10 +45,8 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Compression
 app.use(compression());
 
-// CORS configuration for production
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -88,15 +86,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Initialize logging system
+// Logging & rate limiting
 loggingService.initialize();
-
-// Request logging
 app.use(loggingService.requestIdMiddleware());
 app.use(loggingService.accessLogger());
 app.use(loggingService.sanitizeRequestMiddleware());
@@ -104,11 +98,7 @@ app.use(loggingService.auditLogger());
 app.use(loggingService.securityLogger());
 app.use(loggingService.performanceLogger());
 app.use(loggingService.rateLimitLogger());
-
-// Health check bypass for rate limiting
 app.use(rateLimitingService.healthCheckBypass());
-
-// General rate limiting
 app.use(rateLimitingService.generalApiLimiter());
 
 // ============================================================================
@@ -119,10 +109,7 @@ async function initializeDatabase() {
   try {
     console.log('🔌 Connecting to database...');
     await databaseConfig.connect();
-
-    // Create indexes for better performance
     await databaseConfig.createIndexes();
-
     console.log('✅ Database connected and indexes created');
   } catch (error) {
     console.error('❌ Database connection failed:', error);
@@ -193,4 +180,50 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/extension', extensionRoutes);
 
-// ... rest of your file (unchanged, error handling, server start etc.)
+// ============================================================================
+// AI INTEGRATION ROUTE
+// ============================================================================
+
+app.post('/api/ai/predict', async (req, res) => {
+  try {
+    const input = req.body;
+
+    // Call AI service (Python FastAPI/Flask server)
+    const aiResponse = await axios.post(
+      process.env.AI_URL || 'http://localhost:8000/predict',
+      input
+    );
+
+    res.json(aiResponse.data);
+  } catch (error) {
+    console.error('❌ AI service error:', error.message);
+    res.status(500).json({ error: 'AI service unavailable' });
+  }
+});
+
+// ============================================================================
+// SERVER START
+// ============================================================================
+
+const PORT = process.env.PORT || 5000;
+
+initializeDatabase().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Backend running on http://localhost:${PORT}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AI Proxy Route
+// ---------------------------------------------------------------------------
+const axios = require("axios");
+
+app.post("/api/ai/predict", async (req, res) => {
+  try {
+    const response = await axios.post("http://localhost:8000/predict", req.body);
+    res.json(response.data);
+  } catch (err) {
+    console.error("❌ AI Service error:", err.message);
+    res.status(500).json({ error: "AI service unavailable" });
+  }
+});
