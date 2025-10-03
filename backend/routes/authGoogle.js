@@ -94,7 +94,7 @@ router.post('/google', async (req, res) => {
     // Generate JWT token
     const jwtToken = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_ACCESS_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 

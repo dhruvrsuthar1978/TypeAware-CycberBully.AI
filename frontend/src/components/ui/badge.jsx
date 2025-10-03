@@ -24,4 +24,6 @@ function Badge({ className, variant, ...props }) {
   return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
+Badge.displayName = "Badge";
+
 export { Badge, badgeVariants };

@@ -52,8 +52,8 @@ generate_secrets() {
     log_info "Generating secure secrets..."
     
     if [ ! -f .env.production ]; then
-        JWT_SECRET=$(openssl rand -hex 32)
-        REFRESH_TOKEN_SECRET=$(openssl rand -hex 32)
+        JWT_ACCESS_SECRET=$(openssl rand -hex 32)
+        JWT_REFRESH_SECRET=$(openssl rand -hex 32)
         MONGO_ROOT_PASSWORD=$(openssl rand -hex 16)
         
         cat > .env.production << EOF
@@ -69,9 +69,9 @@ MONGO_ROOT_PASSWORD=$MONGO_ROOT_PASSWORD
 MONGODB_URI=mongodb://admin:$MONGO_ROOT_PASSWORD@typeaware-mongo:27017/typeaware?authSource=admin
 
 # JWT Configuration
-JWT_SECRET=$JWT_SECRET
+JWT_ACCESS_SECRET=$JWT_ACCESS_SECRET
 JWT_EXPIRES_IN=7d
-REFRESH_TOKEN_SECRET=$REFRESH_TOKEN_SECRET
+JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
 
 # Frontend URL (update this!)
 FRONTEND_URL=https://yourdomain.com

@@ -1,12 +1,13 @@
 const express = require('express');
 const userController = require('../controllers/userController');
-const { authenticateToken } = require('../middleware/auth');
+const protect = require('../middleware/authMiddleware');
 const { validate } = require('../middleware/validation');
 
 const router = express.Router();
 
-// All routes are protected by authenticateToken middleware
-// Applied in server.js: app.use('/api/user', authenticateToken, userRoutes);
+// Note: The prompt mentions that the protect middleware is applied
+// in server.js for the entire '/api/users' path. If not, it should be added here.
+// Example: router.use(protect);
 
 // @route   GET /api/user/profile
 // @desc    Get user profile
@@ -105,3 +106,4 @@ router.put('/avatar', userController.updateAvatar);
 router.get('/contributions', userController.getContributionStats);
 
 module.exports = router;
+

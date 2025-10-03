@@ -1,202 +1,158 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+// models/User.js
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
-const userSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']
-  },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters long']
-  },
-  username: {
-    type: String,
-    required: [true, 'Username is required'],
-    trim: true,
-    minlength: [3, 'Username must be at least 3 characters long'],
-    maxlength: [30, 'Username cannot exceed 30 characters'],
-    match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
-  },
-  role: {
-    type: String,
-    enum: {
-      values: ['user', 'admin'],
-      message: 'Role must be either user or admin'
-    },
-    default: 'user'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  browserUUIDs: [{
-    uuid: {
+const userSchema = new mongoose.Schema(
+  {
+    username: {
       type: String,
-      required: true
+      required: [true, "Username is required"],
+      unique: true, // creates a unique index
+      trim: true,
+      minlength: [3, "Username must be at least 3 characters long"],
+      maxlength: [30, "Username cannot exceed 30 characters"],
+      match: [
+        /^[a-zA-Z0-9_ ]+$/,
+        "Username can only contain letters, numbers, underscores, and spaces",
+      ],
     },
-    firstSeen: {
-      type: Date,
-      default: Date.now
-    },
-    lastSeen: {
-      type: Date,
-      default: Date.now
-    },
-    userAgent: String,
-    isActive: {
-      type: Boolean,
-      default: true
-    }
-  }],
-  preferences: {
-    darkMode: {
-      type: Boolean,
-      default: false
-    },
-    notifications: {
-      type: Boolean,
-      default: true
-    },
-    emailUpdates: {
-      type: Boolean,
-      default: false
-    },
-    language: {
+    email: {
       type: String,
-      default: 'en'
-    }
-  },
-  stats: {
-    totalReports: {
-      type: Number,
-      default: 0,
-      min: 0
+      required: [true, "Email is required"],
+      unique: true, // creates a unique index
+      lowercase: true,
+      trim: true,
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        "Please enter a valid email address",
+      ],
     },
-    totalScans: {
-      type: Number,
-      default: 0,
-      min: 0
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters long"],
+      select: false, // excluded from queries
     },
-    threatsDetected: {
-      type: Number,
-      default: 0,
-      min: 0
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
     },
-    lastActivity: {
-      type: Date,
-      default: Date.now
-    }
+    browserUUIDs: [
+      {
+        uuid: { type: String, required: true },
+        firstSeen: { type: Date, default: Date.now },
+        lastSeen: { type: Date, default: Date.now },
+        userAgent: String,
+      },
+    ],
+    preferences: {
+      darkMode: { type: Boolean, default: false },
+      notifications: { type: Boolean, default: true },
+    },
+    stats: {
+      totalReports: { type: Number, default: 0, min: 0 },
+      lastActivity: { type: Date, default: Date.now },
+      totalViolations: { type: Number, default: 0, min: 0 },
+      warningCount: { type: Number, default: 0, min: 0 },
+      suspensionCount: { type: Number, default: 0, min: 0 },
+    },
+    moderation: {
+      status: {
+        type: String,
+        enum: ["active", "warned", "suspended", "banned", "shadow_banned"],
+        default: "active",
+      },
+      shadowBanned: { type: Boolean, default: false },
+      suspensionEndDate: { type: Date, default: null },
+      banReason: { type: String, default: "" },
+      lastWarningDate: { type: Date, default: null },
+      lastSuspensionDate: { type: Date, default: null },
+      moderationNotes: [{
+        date: { type: Date, default: Date.now },
+        admin: { type: String, required: true },
+        action: { type: String, required: true },
+        reason: { type: String, required: true },
+        details: { type: String, default: "" }
+      }],
+      violationHistory: [{
+        date: { type: Date, default: Date.now },
+        type: {
+          type: String,
+          enum: ["warning", "suspension", "ban", "shadow_ban"],
+          required: true
+        },
+        reason: { type: String, required: true },
+        severity: { type: String, enum: ["low", "medium", "high", "critical"], default: "medium" },
+        reportId: { type: mongoose.Schema.Types.ObjectId, ref: "Report" },
+        adminAction: { type: Boolean, default: false }
+      }]
+    },
+    privacy: {
+      anonymousTracking: { type: Boolean, default: true },
+      dataRetention: {
+        deleteAfterInactive: { type: Number, default: 365 }, // days
+        anonymizeAfter: { type: Number, default: 180 } // days
+      },
+      gdprConsent: { type: Boolean, default: false },
+      lastDataExport: { type: Date, default: null }
+    },
+    refreshToken: { type: String, select: false },
+    passwordResetToken: { type: String, select: false },
+    passwordResetExpiry: { type: Date, select: false },
+    emailVerificationToken: { type: String, select: false },
+    emailVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
   },
-  refreshToken: {
-    type: String,
-    select: false // Don't return in queries by default
-  },
-  passwordResetToken: {
-    type: String,
-    select: false
-  },
-  passwordResetExpiry: {
-    type: Date,
-    select: false
-  },
-  emailVerificationToken: {
-    type: String,
-    select: false
-  },
-  emailVerified: {
-    type: Boolean,
-    default: false
-  },
-  lastLoginAt: Date,
-  loginCount: {
-    type: Number,
-    default: 0
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
-}, {
-  timestamps: true
-});
+);
 
-// Indexes for better performance
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
-userSchema.index({ 'browserUUIDs.uuid': 1 });
+// --- INDEXES ---
+// Keep only what you need. Avoid duplicate definitions.
+userSchema.index({ "browserUUIDs.uuid": 1 });
 userSchema.index({ role: 1 });
 
-// Pre-save middleware to hash password
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
+// --- VIRTUALS ---
+userSchema.virtual("fullName").get(function () {
+  return this.username;
+});
+
+// --- MIDDLEWARE ---
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+
   try {
     const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
-    const salt = await bcrypt.genSalt(saltRounds);
-    this.password = await bcrypt.hash(this.password, salt);
+    this.password = await bcrypt.hash(this.password, saltRounds);
     next();
   } catch (error) {
     next(error);
   }
 });
 
-// Instance method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw new Error('Password comparison failed');
-  }
+// --- INSTANCE METHODS ---
+userSchema.methods.comparePassword = function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Instance method to add browser UUID
-userSchema.methods.addBrowserUUID = function(uuid, userAgent = '') {
-  const existingUUID = this.browserUUIDs.find(b => b.uuid === uuid);
-  
-  if (existingUUID) {
-    existingUUID.lastSeen = new Date();
-    existingUUID.isActive = true;
-    if (userAgent) existingUUID.userAgent = userAgent;
-  } else {
-    this.browserUUIDs.push({
-      uuid,
-      userAgent,
-      firstSeen: new Date(),
-      lastSeen: new Date(),
-      isActive: true
-    });
-  }
-  
-  return this.save();
+userSchema.methods.toJSON = function () {
+  const userObject = this.toObject();
+  delete userObject.password;
+  delete userObject.refreshToken;
+  delete userObject.passwordResetToken;
+  delete userObject.passwordResetExpiry;
+  delete userObject.emailVerificationToken;
+  delete userObject.__v;
+  return userObject;
 };
 
-// Instance method to update stats
-userSchema.methods.updateStats = function(statsUpdate) {
-  if (statsUpdate.totalReports) this.stats.totalReports += statsUpdate.totalReports;
-  if (statsUpdate.totalScans) this.stats.totalScans += statsUpdate.totalScans;
-  if (statsUpdate.threatsDetected) this.stats.threatsDetected += statsUpdate.threatsDetected;
-  
-  this.stats.lastActivity = new Date();
-  return this.save();
+// --- STATIC METHODS ---
+userSchema.statics.findByBrowserUUID = function (uuid) {
+  return this.findOne({ "browserUUIDs.uuid": uuid });
 };
 
-// Static method to find by browser UUID
-userSchema.statics.findByBrowserUUID = function(uuid) {
-  return this.findOne({ 'browserUUIDs.uuid': uuid });
-};
-
-// Remove password from JSON output
-userSchema.methods.toJSON = function() {
-  const user = this.toObject();
-  delete user.password;
-  return user;
-};
-
-// Virtual for full name
-userSchema.virtual('fullName').get(function() {
-  return this.username;
-});
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);

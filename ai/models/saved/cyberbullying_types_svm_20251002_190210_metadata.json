@@ -1,0 +1,17 @@
+{
+  "accuracy": 0.8387850467289719,
+  "f1_score": 0.8392007294555796,
+  "category": "cyberbullying_types",
+  "training_samples": 1712,
+  "test_samples": 428,
+  "classes": [
+    "Cyberstalking",
+    "Doxing",
+    "Revenge Porn",
+    "Sexual Harassment",
+    "Slut Shaming"
+  ],
+  "model_name": "cyberbullying_types_svm",
+  "saved_at": "20251002_190210",
+  "model_path": "ai/models/saved\\cyberbullying_types_svm_20251002_190210.pkl"
+}

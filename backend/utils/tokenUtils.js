@@ -17,11 +17,11 @@ const generateToken = (userId, additionalPayload = {}) => {
 
   return jwt.sign(
     payload,
-    process.env.JWT_SECRET,
-    { 
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-      issuer: 'typeaware-api',
-      audience: 'typeaware-client'
+    process.env.JWT_ACCESS_SECRET,
+    {
+      expiresIn: process.env.JWT_ACCESS_EXPIRY || '7d',
+      issuer: process.env.JWT_ISSUER || 'typeaware-api',
+      audience: process.env.JWT_AUDIENCE || 'typeaware-users'
     }
   );
 };
@@ -41,11 +41,11 @@ const generateRefreshToken = (userId) => {
 
   return jwt.sign(
     payload,
-    process.env.REFRESH_TOKEN_SECRET,
+    process.env.JWT_REFRESH_SECRET,
     { 
       expiresIn: '30d', // Refresh tokens last longer
       issuer: 'typeaware-api',
-      audience: 'typeaware-client'
+      audience: 'typeaware-users'
     }
   );
 };
@@ -57,9 +57,9 @@ const generateRefreshToken = (userId) => {
  */
 const verifyToken = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET, {
-      issuer: 'typeaware-api',
-      audience: 'typeaware-client'
+    return jwt.verify(token, process.env.JWT_ACCESS_SECRET, {
+      issuer: process.env.JWT_ISSUER || 'typeaware-api',
+      audience: process.env.JWT_AUDIENCE || 'typeaware-users'
     });
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -79,9 +79,9 @@ const verifyToken = (token) => {
  */
 const verifyRefreshToken = (token) => {
   try {
-    return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, {
-      issuer: 'typeaware-api',
-      audience: 'typeaware-client'
+    return jwt.verify(token, process.env.JWT_REFRESH_SECRET, {
+      issuer: process.env.JWT_ISSUER || 'typeaware-api',
+      audience: process.env.JWT_AUDIENCE || 'typeaware-users'
     });
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -178,7 +178,7 @@ const generateApiKey = (userId, scope = 'read') => {
 
   return jwt.sign(
     payload,
-    process.env.JWT_SECRET,
+    process.env.JWT_ACCESS_SECRET,
     { 
       expiresIn: '1y', // API keys last 1 year
       issuer: 'typeaware-api',
@@ -194,7 +194,7 @@ const generateApiKey = (userId, scope = 'read') => {
  */
 const verifyApiKey = (apiKey) => {
   try {
-    const decoded = jwt.verify(apiKey, process.env.JWT_SECRET, {
+    const decoded = jwt.verify(apiKey, process.env.JWT_ACCESS_SECRET, {
       issuer: 'typeaware-api',
       audience: 'typeaware-external'
     });
@@ -233,7 +233,7 @@ const generateTemporaryToken = (userId, purpose, expiresIn = '1h') => {
 
   return jwt.sign(
     payload,
-    process.env.JWT_SECRET,
+    process.env.JWT_ACCESS_SECRET,
     { 
       expiresIn,
       issuer: 'typeaware-api',
@@ -250,7 +250,7 @@ const generateTemporaryToken = (userId, purpose, expiresIn = '1h') => {
  */
 const verifyTemporaryToken = (token, expectedPurpose) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, {
       issuer: 'typeaware-api',
       audience: 'typeaware-temp'
     });

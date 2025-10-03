@@ -189,7 +189,7 @@ class AuthController {
       }
 
       // Verify refresh token
-      const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
       
       // Find user and validate refresh token
       const user = await authService.findUserById(decoded.userId);

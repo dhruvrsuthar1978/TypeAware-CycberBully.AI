@@ -1,18 +1,9 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { authenticateToken } = require('../middleware/auth');
+const protect = require('../middleware/authMiddleware');
+const { generateToken } = require('../utils/tokenUtils');
 
 const router = express.Router();
-
-// Generate JWT Token
-const generateToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-};
 
 // @route   POST /api/auth/register
 // @desc    Register new user
@@ -100,7 +91,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
       return res.status(401).json({
@@ -159,7 +150,7 @@ router.post('/login', async (req, res) => {
 // @route   GET /api/auth/me
 // @desc    Get current user profile
 // @access  Private
-router.get('/me', authenticateToken, async (req, res) => {
+router.get('/me', protect, async (req, res) => {
   try {
     res.json({
       user: {
@@ -184,7 +175,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 // @route   POST /api/auth/logout
 // @desc    Logout user (client-side token removal)
 // @access  Private
-router.post('/logout', authenticateToken, (req, res) => {
+router.post('/logout', protect, (req, res) => {
   res.json({
     message: 'Logged out successfully'
   });
@@ -193,7 +184,7 @@ router.post('/logout', authenticateToken, (req, res) => {
 // @route   PUT /api/auth/change-password
 // @desc    Change user password
 // @access  Private
-router.put('/change-password', authenticateToken, async (req, res) => {
+router.put('/change-password', protect, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -243,7 +234,7 @@ router.put('/change-password', authenticateToken, async (req, res) => {
 // @route   POST /api/auth/link-browser
 // @desc    Link browser UUID to user account
 // @access  Private
-router.post('/link-browser', authenticateToken, async (req, res) => {
+router.post('/link-browser', protect, async (req, res) => {
   try {
     const { browserUUID, userAgent } = req.body;
 

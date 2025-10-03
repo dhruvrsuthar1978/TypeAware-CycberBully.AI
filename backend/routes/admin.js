@@ -1,502 +1,102 @@
-const express = require('express');
-const Report = require('../models/Report');
-const User = require('../models/User');
+// backend/routes/admin.js
 
+const express = require('express');
 const router = express.Router();
 
-// All routes are protected by authenticateToken and requireAdmin middleware
-// Applied in server.js: app.use('/api/admin', authenticateToken, requireAdmin, adminRoutes);
+// Import the AdminController instance
+const adminController = require('../controllers/adminController');
+// Import middleware (assuming correct exports from auth.js)
+const protect = require('../middleware/authMiddleware');
+const requireAdmin = require('../middleware/adminMiddleware');
+const loggingService = require('../middleware/logging'); 
 
-// @route   GET /api/admin/dashboard
-// @desc    Get admin dashboard overview
-// @access  Admin only
-router.get('/dashboard', async (req, res) => {
-  try {
-    // Get date range (default last 7 days for dashboard)
-    const days = parseInt(req.query.days) || 7;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+// ---------------------------------------------
+// GLOBAL ADMIN MIDDLEWARE (Recommended)
+// ---------------------------------------------
 
-    // System overview stats
-    const totalUsers = await User.countDocuments();
-    const totalReports = await Report.countDocuments();
-    const pendingReports = await Report.countDocuments({ status: 'pending' });
-    const confirmedReports = await Report.countDocuments({ status: 'confirmed' });
+// Ensure all routes require authentication and admin privileges
+router.use(protect); 
+router.use(requireAdmin); 
+router.use(loggingService.auditLogger()); 
 
-    // Recent activity
-    const recentUsers = await User.countDocuments({ 
-      createdAt: { $gte: startDate } 
-    });
-    const recentReports = await Report.countDocuments({ 
-      createdAt: { $gte: startDate } 
-    });
+// ---------------------------------------------
+// DASHBOARD & ANALYTICS ROUTES
+// ---------------------------------------------
 
-    // Top categories
-    const topCategories = await Report.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      {
-        $group: {
-          _id: '$classification.category',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
-    ]);
+// @route GET /api/admin/dashboard (Maps to getDashboard)
+router.get('/dashboard', adminController.getDashboard);
 
-    // Platform distribution
-    const platformDistribution = await Report.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      {
-        $group: {
-          _id: '$context.platform',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
+// @route GET /api/admin/analytics/system (Maps to getSystemAnalytics)
+router.get('/analytics/system', adminController.getSystemAnalytics);
 
-    // Daily activity trend
-    const dailyActivity = await Report.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      {
-        $group: {
-          _id: {
-            $dateToString: {
-              format: '%Y-%m-%d',
-              date: '$createdAt'
-            }
-          },
-          reports: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+// @route GET /api/admin/analytics/accuracy (Maps to getDetectionAccuracy)
+router.get('/analytics/accuracy', adminController.getDetectionAccuracy);
 
-    res.json({
-      overview: {
-        totalUsers,
-        totalReports,
-        pendingReports,
-        confirmedReports,
-        recentUsers,
-        recentReports
-      },
-      analytics: {
-        topCategories,
-        platformDistribution,
-        dailyActivity
-      },
-      dateRange: {
-        start: startDate,
-        end: new Date(),
-        days
-      }
-    });
+// @route GET /api/admin/analytics/platform-stats (Maps to getPlatformStats)
+router.get('/analytics/platform-stats', adminController.getPlatformStats);
 
-  } catch (error) {
-    console.error('Get admin dashboard error:', error);
-    res.status(500).json({
-      error: 'Dashboard Error',
-      message: 'Unable to fetch dashboard data'
-    });
-  }
-});
+// ---------------------------------------------
+// REPORT MANAGEMENT ROUTES
+// ---------------------------------------------
 
-// @route   GET /api/admin/reports/pending
-// @desc    Get pending reports for review
-// @access  Admin only
-router.get('/reports/pending', async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+// @route GET /api/admin/reports/pending (Maps to getPendingReports)
+router.get('/reports/pending', adminController.getPendingReports);
 
-    const reports = await Report.find({ status: 'pending' })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('userId', 'username email browserUUIDs');
+// @route GET /api/admin/reports/flagged (Maps to getFlaggedReports)
+router.get('/reports/flagged', adminController.getFlaggedReports);
 
-    const totalPending = await Report.countDocuments({ status: 'pending' });
+// @route PUT /api/admin/reports/:reportId/review (Maps to reviewReport)
+router.put('/reports/:reportId/review', adminController.reviewReport);
 
-    res.json({
-      reports,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalPending / limit),
-        totalReports: totalPending,
-        limit
-      }
-    });
+// @route POST /api/admin/reports/bulk-review (Maps to bulkReviewReports)
+router.post('/reports/bulk-review', adminController.bulkReviewReports);
 
-  } catch (error) {
-    console.error('Get pending reports error:', error);
-    res.status(500).json({
-      error: 'Fetch Error',
-      message: 'Unable to fetch pending reports'
-    });
-  }
-});
+// @route DELETE /api/admin/reports/:reportId (Maps to deleteReport)
+router.delete('/reports/:reportId', adminController.deleteReport);
 
-// @route   GET /api/admin/reports/flagged
-// @desc    Get recently flagged comments
-// @access  Admin only
-router.get('/reports/flagged', async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
-    const category = req.query.category;
-    const platform = req.query.platform;
-    const severity = req.query.severity;
+// @route GET /api/admin/reports/export (Maps to exportReports)
+router.get('/reports/export', adminController.exportReports);
 
-    // Build filter
-    let filter = {};
-    if (category) filter['classification.category'] = category;
-    if (platform) filter['context.platform'] = platform;
-    if (severity) filter['content.severity'] = severity;
 
-    const reports = await Report.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('userId', 'username email')
-      .populate('adminReview.reviewedBy', 'username');
+// ---------------------------------------------
+// USER & SYSTEM MANAGEMENT ROUTES
+// ---------------------------------------------
 
-    const totalReports = await Report.countDocuments(filter);
+// @route GET /api/admin/users/flagged (Maps to getFlaggedUsers)
+router.get('/users/flagged', adminController.getFlaggedUsers);
 
-    res.json({
-      reports,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalReports / limit),
-        totalReports,
-        limit
-      },
-      filters: {
-        category,
-        platform,
-        severity
-      }
-    });
+// @route GET /api/admin/users/:userId (Maps to getUserDetails)
+router.get('/users/:userId', adminController.getUserDetails);
 
-  } catch (error) {
-    console.error('Get flagged reports error:', error);
-    res.status(500).json({
-      error: 'Fetch Error',
-      message: 'Unable to fetch flagged reports'
-    });
-  }
-});
+// @route PUT /api/admin/users/:userId/status (Maps to updateUserStatus)
+router.put('/users/:userId/status', adminController.updateUserStatus);
 
-// @route   PUT /api/admin/reports/:reportId/review
-// @desc    Review a report (approve/reject)
-// @access  Admin only
-router.put('/reports/:reportId/review', async (req, res) => {
-  try {
-    const { reportId } = req.params;
-    const { decision, notes } = req.body;
+// @route GET /api/admin/logs (Maps to getAdminLogs)
+router.get('/logs', adminController.getAdminLogs);
 
-    if (!decision || !['confirmed', 'false_positive', 'dismissed'].includes(decision)) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Decision must be confirmed, false_positive, or dismissed'
-      });
-    }
+// @route GET /api/admin/queue (Maps to getModerationQueue)
+router.get('/queue', adminController.getModerationQueue);
 
-    const report = await Report.findById(reportId);
+// @route PUT /api/admin/settings (Maps to updateSystemSettings)
+router.put('/settings', adminController.updateSystemSettings);
 
-    if (!report) {
-      return res.status(404).json({
-        error: 'Report Not Found',
-        message: 'Report not found'
-      });
-    }
 
-    // Mark as reviewed
-    await report.markAsReviewed(req.userId, decision, notes || '');
+// ---------------------------------------------
+// MODERATION ROUTES
+// ---------------------------------------------
 
-    res.json({
-      message: 'Report reviewed successfully',
-      report: {
-        id: report._id,
-        status: report.status,
-        adminReview: report.adminReview
-      }
-    });
+const moderationController = require('../controllers/moderationController');
 
-  } catch (error) {
-    console.error('Review report error:', error);
-    res.status(500).json({
-      error: 'Review Failed',
-      message: 'Unable to review report'
-    });
-  }
-});
+// Apply manual moderation action
+router.post('/moderation/apply-action/:userId', moderationController.applyModerationAction);
 
-// @route   GET /api/admin/users/flagged
-// @desc    Get users with most flags
-// @access  Admin only
-router.get('/users/flagged', async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 20;
+// Get user moderation status
+router.get('/moderation/status/:userId', moderationController.getUserModerationStatus);
 
-    // Get users with most reports
-    const flaggedUsers = await Report.aggregate([
-      {
-        $match: {
-          userId: { $ne: null }
-        }
-      },
-      {
-        $group: {
-          _id: '$userId',
-          totalReports: { $sum: 1 },
-          confirmedReports: {
-            $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] }
-          },
-          categories: { $addToSet: '$classification.category' },
-          platforms: { $addToSet: '$context.platform' },
-          lastReport: { $max: '$createdAt' }
-        }
-      },
-      { $sort: { totalReports: -1 } },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      {
-        $unwind: '$user'
-      },
-      {
-        $project: {
-          _id: 1,
-          totalReports: 1,
-          confirmedReports: 1,
-          categories: 1,
-          platforms: 1,
-          lastReport: 1,
-          'user.username': 1,
-          'user.email': 1,
-          'user.role': 1,
-          'user.isActive': 1,
-          'user.createdAt': 1
-        }
-      }
-    ]);
+// Check expired suspensions and reactivate users
+router.post('/moderation/check-expired-suspensions', moderationController.checkExpiredSuspensions);
 
-    res.json({
-      users: flaggedUsers,
-      total: flaggedUsers.length
-    });
-
-  } catch (error) {
-    console.error('Get flagged users error:', error);
-    res.status(500).json({
-      error: 'Fetch Error',
-      message: 'Unable to fetch flagged users'
-    });
-  }
-});
-
-// @route   PUT /api/admin/users/:userId/status
-// @desc    Update user status (activate/deactivate)
-// @access  Admin only
-router.put('/users/:userId/status', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { isActive } = req.body;
-
-    if (typeof isActive !== 'boolean') {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'isActive must be a boolean value'
-      });
-    }
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        error: 'User Not Found',
-        message: 'User not found'
-      });
-    }
-
-    // Prevent admins from deactivating themselves
-    if (userId === req.userId.toString() && !isActive) {
-      return res.status(400).json({
-        error: 'Invalid Operation',
-        message: 'You cannot deactivate your own account'
-      });
-    }
-
-    user.isActive = isActive;
-    await user.save();
-
-    res.json({
-      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        isActive: user.isActive
-      }
-    });
-
-  } catch (error) {
-    console.error('Update user status error:', error);
-    res.status(500).json({
-      error: 'Update Failed',
-      message: 'Unable to update user status'
-    });
-  }
-});
-
-// @route   GET /api/admin/analytics/system
-// @desc    Get comprehensive system analytics
-// @access  Admin only
-router.get('/analytics/system', async (req, res) => {
-  try {
-    const days = parseInt(req.query.days) || 30;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-
-    // System performance metrics
-    const performanceMetrics = await Report.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      {
-        $group: {
-          _id: null,
-          totalReports: { $sum: 1 },
-          avgProcessingTime: { $avg: '$processingTime' },
-          avgConfidence: { $avg: '$classification.confidence' },
-          detectionMethods: {
-            $push: '$classification.detectionMethod'
-          }
-        }
-      }
-    ]);
-
-    // Detection accuracy (based on admin reviews)
-    const accuracyMetrics = await Report.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate },
-          'adminReview.reviewedBy': { $exists: true }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalReviewed: { $sum: 1 },
-          confirmed: {
-            $sum: { $cond: [{ $eq: ['$adminReview.decision', 'confirmed'] }, 1, 0] }
-          },
-          falsePositives: {
-            $sum: { $cond: [{ $eq: ['$adminReview.decision', 'false_positive'] }, 1, 0] }
-          }
-        }
-      }
-    ]);
-
-    // Category trends over time
-    const categoryTrends = await Report.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      {
-        $group: {
-          _id: {
-            date: {
-              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
-            },
-            category: '$classification.category'
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { '_id.date': 1 } }
-    ]);
-
-    const performance = performanceMetrics.length > 0 ? performanceMetrics[0] : {
-      totalReports: 0,
-      avgProcessingTime: 0,
-      avgConfidence: 0,
-      detectionMethods: []
-    };
-
-    const accuracy = accuracyMetrics.length > 0 ? accuracyMetrics[0] : {
-      totalReviewed: 0,
-      confirmed: 0,
-      falsePositives: 0
-    };
-
-    // Calculate accuracy percentage
-    const accuracyRate = accuracy.totalReviewed > 0 
-      ? ((accuracy.confirmed / accuracy.totalReviewed) * 100).toFixed(2)
-      : 0;
-
-    res.json({
-      performance,
-      accuracy: {
-        ...accuracy,
-        accuracyRate: parseFloat(accuracyRate)
-      },
-      trends: categoryTrends,
-      dateRange: {
-        start: startDate,
-        end: new Date(),
-        days
-      }
-    });
-
-  } catch (error) {
-    console.error('Get system analytics error:', error);
-    res.status(500).json({
-      error: 'Analytics Error',
-      message: 'Unable to fetch system analytics'
-    });
-  }
-});
-
-// @route   DELETE /api/admin/reports/:reportId
-// @desc    Delete a report (admin only)
-// @access  Admin only
-router.delete('/reports/:reportId', async (req, res) => {
-  try {
-    const { reportId } = req.params;
-    const { reason } = req.body;
-
-    const report = await Report.findById(reportId);
-
-    if (!report) {
-      return res.status(404).json({
-        error: 'Report Not Found',
-        message: 'Report not found'
-      });
-    }
-
-    // Log the deletion (you might want to create an audit log)
-    console.log(`Report ${reportId} deleted by admin ${req.userId} - Reason: ${reason || 'No reason provided'}`);
-
-    await Report.findByIdAndDelete(reportId);
-
-    res.json({
-      message: 'Report deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Delete report error:', error);
-    res.status(500).json({
-      error: 'Delete Failed',
-      message: 'Unable to delete report'
-    });
-  }
-});
-
+// ---------------------------------------------
+// EXPORT
+// ---------------------------------------------
 module.exports = router;

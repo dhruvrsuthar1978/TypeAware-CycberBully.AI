@@ -1,198 +1,232 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Shield, 
-  Eye, 
-  Brain, 
-  Lock, 
-  Zap,
-  Globe,
-  Users,
-  Target
-} from 'lucide-react';
+import { Shield, Target, Users, Brain, Lock, Zap, Globe, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const About = () => {
-  const values = [
+  const missions = [
     {
-      icon: Lock,
-      title: "Privacy First",
-      description: "All detection happens locally in your browser. Your data never leaves your device unless you choose to sync reports."
+      icon: Target,
+      title: 'Our Mission',
+      description: 'To create safer digital communities through intelligent, privacy-first content moderation and real-time threat detection.'
     },
     {
-      icon: Shield,
-      title: "Proven Protection",
-      description: "Our advanced AI models achieve 97%+ accuracy in detecting toxic behavior across multiple platforms."
+      icon: Brain,
+      title: 'Our Technology',
+      description: 'Advanced AI and machine learning algorithms that work entirely on-device, ensuring privacy while maintaining accuracy.'
     },
     {
       icon: Users,
-      title: "Community Driven",
-      description: "Built with feedback from online communities, moderators, and safety experts worldwide."
-    },
-    {
-      icon: Target,
-      title: "Precise Detection",
-      description: "Smart algorithms that understand context, avoiding false positives while catching sophisticated abuse."
+      title: 'Our Community',
+      description: 'Building a collaborative network of users, moderators, and platforms working together for digital safety.'
     }
   ];
 
   const features = [
     {
-      icon: Brain,
-      title: "Advanced NLP",
-      description: "Natural language processing that understands context, slang, and obfuscated abuse patterns."
-    },
-    {
-      icon: Eye,
-      title: "Real-time Monitoring",
-      description: "Instant detection and flagging as you browse, with customizable sensitivity levels."
+      icon: Lock,
+      title: 'Privacy by Design',
+      description: 'All detection happens locally on your device. No personal data is ever transmitted or stored on our servers.',
+      highlight: true
     },
     {
       icon: Zap,
-      title: "Lightning Fast",
-      description: "Optimized for performance with minimal impact on your browsing experience."
+      title: 'Real-Time Processing',
+      description: 'Instant threat detection using advanced natural language processing and pattern recognition algorithms.'
     },
     {
       icon: Globe,
-      title: "Universal Coverage",
-      description: "Works across all websites and social platforms, adapting to each site's unique structure."
+      title: 'Cross-Platform Support',
+      description: 'Seamlessly works across Twitter, YouTube, Reddit, Facebook, Discord, and more platforms.'
+    },
+    {
+      icon: Shield,
+      title: 'Advanced Detection',
+      description: 'Multi-layered approach combining regex, NLP, and fuzzy matching to catch various forms of abuse.'
+    }
+  ];
+
+  const stats = [
+    { number: '99.3%', label: 'Detection Accuracy' },
+    { number: '<100ms', label: 'Processing Time' },
+    { number: '15,420+', label: 'Active Users' },
+    { number: '5+', label: 'Supported Platforms' }
+  ];
+
+  const team = [
+    {
+      name: 'Security Team',
+      role: 'AI & Machine Learning',
+      description: 'Expert researchers in natural language processing and threat detection algorithms.'
+    },
+    {
+      name: 'Privacy Team',
+      role: 'Data Protection',
+      description: 'Specialists ensuring all processing remains private and secure on user devices.'
+    },
+    {
+      name: 'Platform Team',
+      role: 'Integration & Support',
+      description: 'Engineers building seamless integrations across social media platforms.'
     }
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen">
       {/* Hero Section */}
-      <div className="text-center mb-16">
-        <Shield className="h-16 w-16 mx-auto text-primary mb-6" />
-        <h1 className="text-4xl md:text-5xl font-bold mb-6">
-          About TypeAware
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          TypeAware is a comprehensive safety platform that uses advanced AI to detect, 
-          prevent, and moderate toxic behavior across the web, creating safer online 
-          spaces for everyone.
-        </p>
-      </div>
-
-      {/* Mission Section */}
-      <section className="mb-16">
-        <div className="bg-gradient-primary p-8 md:p-12 rounded-2xl text-white">
-          <h2 className="text-3xl font-bold mb-4">Our Mission</h2>
-          <p className="text-lg opacity-90 leading-relaxed">
-            We believe the internet should be a place where everyone can express themselves 
-            freely without fear of harassment, abuse, or toxicity. TypeAware empowers users 
-            and communities with intelligent tools to identify and address harmful behavior 
-            before it escalates, fostering healthier online interactions.
+      <section className="relative py-20 px-4 bg-gradient-hero overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative max-w-4xl mx-auto text-center">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <Shield className="h-16 w-16 text-white" />
+              <div className="absolute inset-0 bg-white/30 rounded-full blur-xl"></div>
+            </div>
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            About TypeAware
+          </h1>
+          
+          <p className="text-xl text-white/90 max-w-3xl mx-auto mb-8">
+            We're building the future of online safety through intelligent, privacy-first content moderation. 
+            Our mission is to create digital spaces where everyone can communicate freely and safely.
           </p>
         </div>
       </section>
 
-      {/* Core Values */}
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Our Core Values</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {values.map((value, index) => (
-            <Card key={index} className="shadow-card hover:shadow-glow transition-all duration-300">
-              <CardContent className="p-6">
-                <value.icon className="h-10 w-10 text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-3">{value.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{value.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Technology Features */}
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Advanced Technology</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="shadow-card hover:shadow-glow transition-all duration-300 text-center">
-              <CardContent className="p-6">
-                <feature.icon className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-3">{feature.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold text-center mb-12">How TypeAware Works</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h3 className="text-2xl font-semibold mb-6">Intelligent Detection Engine</h3>
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-bold">1</div>
-                <div>
-                  <h4 className="font-semibold mb-1">Content Analysis</h4>
-                  <p className="text-muted-foreground text-sm">Advanced NLP models analyze text in real-time for toxic patterns</p>
+      {/* Stats Section */}
+      <section className="py-16 bg-muted/50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
+                  {stat.number}
+                </div>
+                <div className="text-muted-foreground font-medium">
+                  {stat.label}
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-bold">2</div>
-                <div>
-                  <h4 className="font-semibold mb-1">Context Understanding</h4>
-                  <p className="text-muted-foreground text-sm">AI considers conversation context to avoid false positives</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-bold">3</div>
-                <div>
-                  <h4 className="font-semibold mb-1">Smart Actions</h4>
-                  <p className="text-muted-foreground text-sm">Automated blocking, reporting, and suggestion systems activate</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
-          <div className="bg-muted/30 rounded-2xl p-8">
-            <h4 className="font-semibold mb-4 text-center">Detection Capabilities</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="bg-background p-3 rounded-lg text-center">
-                <div className="font-bold text-primary">Hate Speech</div>
-                <div className="text-muted-foreground">99.1%</div>
-              </div>
-              <div className="bg-background p-3 rounded-lg text-center">
-                <div className="font-bold text-secondary">Harassment</div>
-                <div className="text-muted-foreground">97.8%</div>
-              </div>
-              <div className="bg-background p-3 rounded-lg text-center">
-                <div className="font-bold text-accent">Spam</div>
-                <div className="text-muted-foreground">98.5%</div>
-              </div>
-              <div className="bg-background p-3 rounded-lg text-center">
-                <div className="font-bold text-warning">Threats</div>
-                <div className="text-muted-foreground">96.3%</div>
-              </div>
-            </div>
+        </div>
+      </section>
+
+      {/* Mission Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              Our Core Values
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Everything we do is guided by our commitment to privacy, accuracy, and community safety
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {missions.map((mission, index) => (
+              <Card key={index} className="text-center hover:shadow-elegant transition-smooth">
+                <CardHeader className="pb-4">
+                  <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-primary text-white mx-auto">
+                    <mission.icon className="h-8 w-8" />
+                  </div>
+                  <CardTitle className="text-xl">{mission.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{mission.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Technology Section */}
+      <section className="py-20 px-4 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              How TypeAware Works
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Advanced technology stack designed for privacy, speed, and accuracy
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            {features.map((feature, index) => (
+              <Card key={index} className={`hover:shadow-elegant transition-smooth ${
+                feature.highlight ? 'ring-2 ring-primary/20 bg-gradient-card' : ''
+              }`}>
+                <CardContent className="p-6">
+                  <div className="flex items-start space-x-4">
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
+                      feature.highlight ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                    }`}>
+                      <feature.icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                      <p className="text-muted-foreground">{feature.description}</p>
+                      {feature.highlight && (
+                        <div className="flex items-center mt-3 text-sm text-primary">
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          <span className="font-medium">Privacy Guaranteed</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Team Section */}
-      <section className="text-center">
-        <h2 className="text-3xl font-bold mb-8">Built by Experts</h2>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-8">
-          TypeAware is developed by a team of AI researchers, safety experts, and community 
-          moderators who understand the complexities of online behavior and the importance 
-          of creating inclusive digital spaces.
-        </p>
-        <div className="bg-muted/30 rounded-2xl p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-2xl font-bold text-primary mb-2">250K+</div>
-              <div className="text-muted-foreground">Protected Users</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-secondary mb-2">10M+</div>
-              <div className="text-muted-foreground">Toxic Comments Blocked</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-accent mb-2">500+</div>
-              <div className="text-muted-foreground">Supported Platforms</div>
+      <section className="py-20 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              Our Expert Teams
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Dedicated professionals working to make the internet a safer place for everyone
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {team.map((member, index) => (
+              <Card key={index} className="text-center hover:shadow-elegant transition-smooth">
+                <CardContent className="p-6">
+                  <div className="w-16 h-16 rounded-full bg-gradient-primary text-white flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">{member.name}</h3>
+                  <p className="text-primary font-medium mb-3">{member.role}</p>
+                  <p className="text-muted-foreground">{member.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 bg-gradient-hero relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            Join the Movement
+          </h2>
+          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            Be part of the solution. Help us build safer digital communities for everyone.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-w-md border border-white/20">
+              <h3 className="text-lg font-semibold text-white mb-2">Ready to get started?</h3>
+              <p className="text-white/80 text-sm">Join thousands of users protecting their communities</p>
             </div>
           </div>
         </div>

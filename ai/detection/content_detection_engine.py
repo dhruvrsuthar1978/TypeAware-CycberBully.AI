@@ -17,6 +17,15 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import ML detection engine
+try:
+    from .ml_detection_engine import MLDetectionEngine
+    ML_AVAILABLE = True
+except ImportError:
+    logger.warning("ML detection engine not available, running in rule-based mode only")
+    ML_AVAILABLE = False
+    MLDetectionEngine = None
+
 class SeverityLevel(IntEnum):
     """Enumeration for severity levels"""
     LOW = 1
@@ -57,11 +66,11 @@ class ContentDetectionEngine:
     def __init__(self):
         self.severity = SeverityLevel
         self.abusive_patterns = self._initialize_patterns()
-        
+
         # Performance optimization
         self.detection_cache = {}
         self.max_cache_size = 1000
-        
+
         # Statistics tracking
         self.stats = {
             'total_scanned': 0,
@@ -71,7 +80,17 @@ class ContentDetectionEngine:
             'cache_hits': 0,
             'cache_misses': 0
         }
-        
+
+        # Initialize ML detection engine if available
+        self.ml_engine = None
+        if ML_AVAILABLE:
+            try:
+                self.ml_engine = MLDetectionEngine()
+                logger.info("ML detection engine initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize ML detection engine: {e}")
+                self.ml_engine = None
+
         logger.info("ContentDetectionEngine initialized successfully")
 
     def _initialize_patterns(self) -> Dict[str, Dict]:
@@ -216,25 +235,38 @@ class ContentDetectionEngine:
         
         # Preprocess text
         preprocessed_text = self._preprocess_text(text)
-        
-        # Run detection for each category
-        all_detections = []
+
+        # Run rule-based detection for each category
+        rule_based_detections = []
         for category, config in self.abusive_patterns.items():
             category_detections = self._detect_category(
                 preprocessed_text, text, category, config, context
             )
-            all_detections.extend(category_detections)
-        
+            rule_based_detections.extend(category_detections)
+
+        # Run ML detection if available
+        ml_detections = []
+        if self.ml_engine:
+            try:
+                ml_result = self.ml_engine.detect_abusive_content(text, context)
+                if ml_result and ml_result.detections:
+                    ml_detections = ml_result.detections
+            except Exception as e:
+                logger.warning(f"ML detection failed: {e}")
+
+        # Combine rule-based and ML detections
+        all_detections = rule_based_detections + ml_detections
+
         # Calculate risk score and create result
         result = self._calculate_risk_score(all_detections, text, context)
         result.processing_time = time.time() - start_time
-        
+
         # Update statistics
         self._update_stats(result)
-        
+
         # Cache the result
         self._cache_result(cache_key, result)
-        
+
         return result
 
     def _preprocess_text(self, text: str) -> str:

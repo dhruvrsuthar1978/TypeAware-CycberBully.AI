@@ -52,7 +52,7 @@ railway add --service mongodb
 
 # Set environment variables
 railway variables set NODE_ENV=production
-railway variables set JWT_SECRET=your-super-secret-production-key
+railway variables set JWT_ACCESS_SECRET=your-super-secret-production-key
 railway variables set MONGODB_URI=${{MongoDB.DATABASE_URL}}
 railway variables set FRONTEND_URL=https://your-frontend-domain.com
 
@@ -84,7 +84,7 @@ heroku addons:create mongolab:sandbox
 
 # Set environment variables
 heroku config:set NODE_ENV=production
-heroku config:set JWT_SECRET=your-super-secret-production-key
+heroku config:set JWT_ACCESS_SECRET=your-super-secret-production-key
 heroku config:set FRONTEND_URL=https://your-frontend-domain.com
 
 # Deploy
@@ -117,7 +117,7 @@ services:
   env:
   - key: NODE_ENV
     value: production
-  - key: JWT_SECRET
+  - key: JWT_ACCESS_SECRET
     value: your-super-secret-production-key
     type: SECRET
   - key: MONGODB_URI
@@ -157,7 +157,7 @@ eb create typeaware-production
 #### Step 2: Configure Environment Variables
 ```bash
 eb setenv NODE_ENV=production
-eb setenv JWT_SECRET=your-super-secret-production-key
+eb setenv JWT_ACCESS_SECRET=your-super-secret-production-key
 eb setenv MONGODB_URI=your-mongodb-atlas-connection-string
 eb setenv FRONTEND_URL=https://your-frontend-domain.com
 ```
@@ -213,9 +213,9 @@ PORT=3001
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/typeaware
 
 # JWT (Generate strong secrets!)
-JWT_SECRET=your-super-long-random-secret-key-at-least-32-characters
+JWT_ACCESS_SECRET=your-super-long-random-secret-key-at-least-32-characters
 JWT_EXPIRES_IN=7d
-REFRESH_TOKEN_SECRET=another-super-long-random-secret-key
+JWT_REFRESH_SECRET=another-super-long-random-secret-key
 
 # CORS
 FRONTEND_URL=https://your-frontend-domain.com

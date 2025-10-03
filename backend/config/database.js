@@ -47,7 +47,7 @@ class DatabaseConfig {
       family: 4, // Use IPv4, skip trying IPv6
       
       // Buffering options
-      bufferMaxEntries: 0,
+      
       bufferCommands: false,
       
       // Write concern
@@ -60,7 +60,7 @@ class DatabaseConfig {
       // Additional options
       retryWrites: true,
       retryReads: true,
-      compressors: ['snappy', 'zlib']
+      compressors: ['zlib']
     };
   }
 
@@ -206,7 +206,6 @@ class DatabaseConfig {
       // User indexes
       await mongoose.connection.collection('users').createIndexes([
         { key: { email: 1 }, unique: true },
-        { key: { uuid: 1 }, unique: true },
         { key: { role: 1 } },
         { key: { createdAt: 1 } },
         { key: { lastActiveAt: 1 } }

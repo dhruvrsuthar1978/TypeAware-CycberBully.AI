@@ -4,6 +4,7 @@ const router = express.Router();
 const analyticsController = require('../controllers/analyticsController');
 
 // Each route explicitly calls the controller method
+router.get('/overview', (req, res) => analyticsController.getSystemAnalytics(req, res));
 router.get('/system', (req, res) => analyticsController.getSystemAnalytics(req, res));
 router.get('/abusive-terms', (req, res) => analyticsController.getAbusiveTermsStats(req, res));
 router.get('/platform-stats', (req, res) => analyticsController.getPlatformStats(req, res));

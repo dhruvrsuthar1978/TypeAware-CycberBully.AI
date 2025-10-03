@@ -303,8 +303,21 @@ class ObfuscationDetector:
         # Leet speak substitutions
         leet_word = word
         for leet_char, normal_char in self.leet_speak_map.items():
+            # Replace normal_char with leet_char in the word
             leet_word = leet_word.replace(normal_char, leet_char)
         variants.add(leet_word)
+        
+        # Add common leet speak variants manually for better coverage
+        common_leet_variants = {
+            'hello': ['h3llo', 'he11o', 'h311o', 'h3ll0', 'he1lo'],
+            'stupid': ['5tupid', 'stup1d', 'stup!d', '5tup1d'],
+            'idiot': ['1diot', 'id!ot', '1d10t', 'id10t'],
+            'hate': ['h4te', 'ha7e', 'h@te'],
+            'kill': ['k1ll', 'ki11', 'k!ll']
+        }
+        if word in common_leet_variants:
+            for variant in common_leet_variants[word]:
+                variants.add(variant)
         
         return list(variants)[:max_variants]
 

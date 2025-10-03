@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext(undefined);
+const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -12,71 +12,96 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const API_BASE_URL = 'http://localhost:5000/api';
 
   useEffect(() => {
-    // Check for stored user on mount
-    const storedUser = localStorage.getItem('typeaware_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    // Check for existing auth in localStorage on mount
+    const token = localStorage.getItem('typeaware_token');
+    const savedUser = localStorage.getItem('typeaware_user');
+    if (token && savedUser) {
+      setUser(JSON.parse(savedUser));
     }
+    setIsLoading(false);
   }, []);
 
   const login = async (email, password) => {
-    // Mock authentication - in real app this would call an API
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    // Demo users for testing
-    if (email === 'admin@typeaware.com' && password === 'admin123') {
-      const adminUser = {
-        id: '1',
-        email: 'admin@typeaware.com',
-        name: 'Admin User',
-        role: 'admin'
-      };
-      setUser(adminUser);
-      localStorage.setItem('typeaware_user', JSON.stringify(adminUser));
-      return true;
-    } else if (email === 'user@typeaware.com' && password === 'user123') {
-      const regularUser = {
-        id: '2',
-        email: 'user@typeaware.com',
-        name: 'Regular User',
-        role: 'user'
-      };
-      setUser(regularUser);
-      localStorage.setItem('typeaware_user', JSON.stringify(regularUser));
-      return true;
+      const data = await response.json();
+
+      if (response.ok) {
+        const { token, user: userData } = data;
+        localStorage.setItem('typeaware_token', token);
+        localStorage.setItem('typeaware_user', JSON.stringify(userData));
+        setUser(userData);
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Login failed' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    } finally {
+      setIsLoading(false);
     }
-
-    return false;
   };
 
   const signup = async (name, email, password) => {
-    // Mock signup - in real app this would call an API
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: name, email, password }),
+      });
 
-    const newUser = {
-      id: Date.now().toString(),
-      email,
-      name,
-      role: 'user'
-    };
+      const data = await response.json();
 
-    setUser(newUser);
-    localStorage.setItem('typeaware_user', JSON.stringify(newUser));
-    return true;
+      if (response.ok) {
+        const { token, user: userData } = data;
+        localStorage.setItem('typeaware_token', token);
+        localStorage.setItem('typeaware_user', JSON.stringify(userData));
+        setUser(userData);
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Signup failed' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('typeaware_token');
     localStorage.removeItem('typeaware_user');
+  };
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('typeaware_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
   const value = {
     user,
+    isLoading,
     login,
     signup,
     logout,
+    getAuthHeaders,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin'
   };

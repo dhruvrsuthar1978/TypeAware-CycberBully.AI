@@ -1,0 +1,2 @@
+[console_scripts]
+typeaware-server = ai.run_server:main

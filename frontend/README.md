@@ -1,16 +1,72 @@
-# React + Vite
+Welcome to Your New Project
+This guide provides instructions on how to get your project set up and running.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+How to Edit This Code
+You can edit your application code using several methods.
 
-Currently, two official plugins are available:
+Use Your Preferred IDE
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+If you prefer to work locally, you can clone this repository and push changes directly.
 
-## React Compiler
+The only requirement is having Node.js & npm installed. We recommend using nvm to manage your Node.js versions.
 
-The React Compiler is not enabled on this template. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Follow these steps to get started:
 
-## Expanding the ESLint configuration
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install the necessary dependencies.
+npm i
+
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+
+Edit a File Directly in GitHub
+
+Navigate to the file you want to edit.
+
+Click the "Edit" button (pencil icon) at the top right of the file view.
+
+Make your changes and commit them.
+
+Use GitHub Codespaces
+
+Navigate to the main page of your repository.
+
+Click the green "Code" button.
+
+Select the "Codespaces" tab.
+
+Click "Create codespace on main" to launch a new Codespace environment.
+
+Edit files directly within the Codespace, then commit and push your changes.
+
+Technology Stack
+This project is built with:
+
+Vite
+
+TypeScript
+
+React
+
+shadcn-ui
+
+Tailwind CSS
+
+How to Deploy This Project
+You can deploy this Vite project to any static hosting service. Some popular options include:
+
+Vercel
+
+Netlify
+
+GitHub Pages
+
+Most of these platforms allow you to connect your Git repository for continuous deployment, automatically building and deploying your site whenever you push new changes.
+
+Can I Connect a Custom Domain?
+Yes. Once your project is deployed to a hosting provider like Vercel or Netlify, you can connect a custom domain through their platform settings. You will typically need to update your domain's DNS records to point to the hosting service.

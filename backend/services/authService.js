@@ -9,7 +9,7 @@ class AuthService {
       return await User.findOne({ 
         email: email.toLowerCase(),
         isActive: true 
-      });
+      }).select('+password');
     } catch (error) {
       throw new Error(`Error finding user by email: ${error.message}`);
     }

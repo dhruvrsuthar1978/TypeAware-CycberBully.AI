@@ -1,117 +1,194 @@
-import React from "react"
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import Layout from "./components/layout/Layout";
+import Home from "./pages/Home";
+import About from "./pages/About";
+import Demo from "./pages/Demo";
+import Extension from "./pages/Extension";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import UserDashboard from "./pages/UserDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import Settings from "./pages/Settings";
+import Contact from "./pages/Contact";
+import LearnMore from "./pages/LearnMore";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import NotFound from "./pages/NotFound";
 
-// Context providers
-import { AuthProvider, useAuth } from "@/contexts/AuthContext"
-import { ThemeProvider } from "@/contexts/ThemeContext"
+const queryClient = new QueryClient();
 
-// UI components
-import Navigation from "@/components/Navigation"
-import { Toaster } from "@/components/ui/toaster"
-import { TooltipProvider } from "@/components/ui/tooltip"
-
-// Pages
-import Home from "./pages/Home"
-import About from "./pages/About"
-import ToxicityDemo from "./pages/ToxicityDemo"
-import Login from "./pages/Login"
-import Signup from "./pages/Signup"
-import UserDashboard from "./pages/UserDashboard"
-import AdminDashboard from "./pages/AdminDashboard"
-import NotFound from "./pages/NotFound"
-
-const queryClient = new QueryClient()
-
-// 👉 Your test function
-async function sendToAI(input) {
-  const response = await fetch("http://localhost:5000/api/ai/predict", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  })
-
-  const data = await response.json()
-  console.log("AI says:", data)
-  return data
-}
-
-// Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { isAuthenticated, isAdmin } = useAuth()
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" />;
   }
 
   if (adminOnly && !isAdmin) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/dashboard" />;
   }
 
-  return <>{children}</>
-}
+  return children;
+};
 
-const AppContent = () => {
-  // 👉 quick test: call AI when clicking button
-  const handleAITest = async () => {
-    const result = await sendToAI({ message: "Hello AI!" })
-    alert("AI says: " + JSON.stringify(result))
+// ✅ Define routes here instead of <Routes> in JSX
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: (
+        <Layout>
+          <Home />
+        </Layout>
+      ),
+    },
+    {
+      path: "/about",
+      element: (
+        <Layout>
+          <About />
+        </Layout>
+      ),
+    },
+    {
+      path: "/demo",
+      element: (
+        <Layout>
+          <Demo />
+        </Layout>
+      ),
+    },
+    {
+      path: "/extension",
+      element: (
+        <Layout>
+          <Extension />
+        </Layout>
+      ),
+    },
+    {
+      path: "/login",
+      element: (
+        <Layout>
+          <Login />
+        </Layout>
+      ),
+    },
+    {
+      path: "/signup",
+      element: (
+        <Layout>
+          <Signup />
+        </Layout>
+      ),
+    },
+    {
+      path: "/dashboard",
+      element: (
+        <Layout>
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        </Layout>
+      ),
+    },
+    {
+      path: "/admin",
+      element: (
+        <Layout>
+          <ProtectedRoute adminOnly>
+            <AdminDashboard />
+          </ProtectedRoute>
+        </Layout>
+      ),
+    },
+    {
+      path: "/settings",
+      element: (
+        <Layout>
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        </Layout>
+      ),
+    },
+    {
+      path: "/contact",
+      element: (
+        <Layout>
+          <Contact />
+        </Layout>
+      ),
+    },
+    {
+      path: "/learn-more",
+      element: (
+        <Layout>
+          <LearnMore />
+        </Layout>
+      ),
+    },
+    {
+      path: "/privacy-policy",
+      element: (
+        <Layout>
+          <PrivacyPolicy />
+        </Layout>
+      ),
+    },
+    {
+      path: "/terms-of-service",
+      element: (
+        <Layout>
+          <TermsOfService />
+        </Layout>
+      ),
+    },
+    {
+      path: "*",
+      element: (
+        <Layout>
+          <NotFound />
+        </Layout>
+      ),
+    },
+  ],
+  {
+    // 🚀 Opt in to React Router v7 behavior now
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    },
   }
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/demo" element={<ToxicityDemo />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <UserDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-
-      {/* 👉 Temporary AI test button */}
-      <div className="p-4">
-        <button
-          onClick={handleAITest}
-          className="px-4 py-2 rounded bg-blue-500 text-white"
-        >
-          Test AI
-        </button>
-      </div>
-    </div>
-  )
-}
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <AppContent />
-            <Toaster />
-          </BrowserRouter>
-        </AuthProvider>
-      </ThemeProvider>
+      <Toaster />
+      <Sonner />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
-)
+);
 
-export default App
+export default App;

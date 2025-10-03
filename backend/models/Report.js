@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 
+// This is a sub-schema, which doesn't get its own _id by default.
 const flaggedTermSchema = new mongoose.Schema({
   term: String,
-  positions: [Number], // Character positions where term appears
+  positions: [Number], // Character positions where the term appears
   severity: {
     type: String,
     enum: ['low', 'medium', 'high', 'critical'],
@@ -14,13 +15,13 @@ const reportSchema = new mongoose.Schema({
   browserUUID: {
     type: String,
     required: [true, 'Browser UUID is required'],
-    index: true
+    // index: true <-- REMOVED this to prevent duplicate index warning
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    index: true,
     default: null
+    // index: true <-- REMOVED this to prevent duplicate index warning
   },
   content: {
     original: {
@@ -28,51 +29,19 @@ const reportSchema = new mongoose.Schema({
       required: [true, 'Original content is required'],
       maxlength: [10000, 'Content cannot exceed 10000 characters']
     },
-    cleaned: {
-      type: String,
-      default: ''
-    },
     flaggedTerms: {
       type: [flaggedTermSchema],
       default: []
     },
-    wordCount: {
-      type: Number,
-      default: 0
-    },
-    severity: {
-      type: String,
-      enum: {
-        values: ['low', 'medium', 'high', 'critical'],
-        message: 'Severity must be low, medium, high, or critical'
-      },
-      default: 'medium'
-    }
+    wordCount: { type: Number, default: 0 }
   },
   context: {
     platform: {
       type: String,
-      enum: {
-        values: ['twitter', 'youtube', 'reddit', 'facebook', 'instagram', 'tiktok', 'linkedin', 'other'],
-        message: 'Platform must be one of the supported platforms'
-      },
+      enum: ['twitter', 'youtube', 'reddit', 'facebook', 'instagram', 'tiktok', 'linkedin', 'other'],
       required: [true, 'Platform is required']
     },
-    url: {
-      type: String,
-      default: '',
-      validate: {
-        validator: function(v) {
-          return !v || /^https?:\/\/.+/.test(v);
-        },
-        message: 'URL must be a valid HTTP/HTTPS URL'
-      }
-    },
-    pageTitle: {
-      type: String,
-      maxlength: [500, 'Page title cannot exceed 500 characters'],
-      default: ''
-    },
+    url: { type: String, default: '' },
     elementType: {
       type: String,
       enum: ['comment', 'post', 'reply', 'message', 'bio', 'other'],
@@ -82,109 +51,81 @@ const reportSchema = new mongoose.Schema({
   classification: {
     category: {
       type: String,
-      enum: {
-        values: ['harassment', 'hate_speech', 'spam', 'bullying', 'threat', 'sexual_content', 'violence', 'discrimination', 'other'],
-        message: 'Category must be one of the predefined types'
-      },
+      enum: ['harassment', 'hate_speech', 'spam', 'bullying', 'threat', 'sexual_content', 'violence', 'discrimination', 'other'],
       required: [true, 'Classification category is required']
     },
     confidence: {
       type: Number,
-      min: [0, 'Confidence must be between 0 and 1'],
-      max: [1, 'Confidence must be between 0 and 1'],
+      min: 0,
+      max: 1,
       required: [true, 'Confidence score is required']
     },
     detectionMethod: {
       type: String,
-      enum: {
-        values: ['regex', 'nlp', 'fuzzy_match', 'user_report', 'ml_model'],
-        message: 'Detection method must be one of the supported types'
-      },
+      enum: ['regex', 'nlp', 'fuzzy_match', 'user_report', 'ml_model'],
       required: [true, 'Detection method is required']
     }
   },
   status: {
     type: String,
-    enum: {
-      values: ['pending', 'under_review', 'confirmed', 'false_positive', 'dismissed'],
-      message: 'Status must be one of the predefined values'
-    },
+    enum: ['pending', 'under_review', 'confirmed', 'false_positive', 'dismissed'],
     default: 'pending'
   },
   adminReview: {
-    reviewedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null
-    },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: Date,
-    decision: {
-      type: String,
-      enum: ['confirmed', 'false_positive', 'dismissed'],
-      default: null
-    },
-    notes: {
-      type: String,
-      maxlength: [1000, 'Review notes cannot exceed 1000 characters'],
-      default: ''
-    }
+    decision: { type: String, enum: ['confirmed', 'false_positive', 'dismissed', null], default: null },
+    notes: { type: String, maxlength: 1000, default: '' }
   },
   metadata: {
-    userAgent: {
-      type: String,
-      default: ''
-    },
-    ipHash: {
-      type: String,
-      default: ''
-    }, // Hashed for privacy
-    sessionId: {
-      type: String,
-      default: ''
-    },
-    timestamp: {
-      type: Date,
-      default: Date.now
-    }
+    userAgent: { type: String, default: '' },
+    // This is the custom timestamp field from the error log
+    timestamp: { type: Date, default: Date.now }
   }
 }, {
+  // This option automatically adds createdAt and updatedAt fields and indexes them.
   timestamps: true
 });
 
-// Indexes for better performance
+// --- INDEXES ---
+// All indexes are now managed here for clarity and to prevent conflicts.
 reportSchema.index({ browserUUID: 1, createdAt: -1 });
 reportSchema.index({ userId: 1, createdAt: -1 });
 reportSchema.index({ 'context.platform': 1 });
 reportSchema.index({ 'classification.category': 1 });
-reportSchema.index({ status: 1 });
-reportSchema.index({ createdAt: -1 });
+reportSchema.index({ status: 1, createdAt: -1 }); // Compound index for querying pending reports
+reportSchema.index({ 'metadata.timestamp': -1 }); // Added to address the "timestamp" warning
 
-// Pre-save middleware
+// --- MIDDLEWARE ---
+// A pre-save hook to automatically calculate the word count.
 reportSchema.pre('save', function(next) {
-  // Calculate word count safely
-  if (typeof this.content?.original === 'string') {
+  if (this.isModified('content.original') && typeof this.content.original === 'string') {
     this.content.wordCount = this.content.original.trim().split(/\s+/).length;
-  } else {
-    this.content.wordCount = 0;
   }
   next();
 });
 
-// Static methods
+// --- STATIC METHODS ---
+// Methods available on the Report model itself.
+
+/**
+ * Gets the most recent reports, populated with user details.
+ * @param {number} limit The maximum number of reports to return.
+ * @returns {Promise<Array>} A promise that resolves to an array of reports.
+ */
 reportSchema.statics.getRecentReports = function(limit = 50) {
   return this.find()
     .sort({ createdAt: -1 })
     .limit(limit)
     .populate('userId', 'username email role')
-    .populate('adminReview.reviewedBy', 'username email');
+    .populate('adminReview.reviewedBy', 'username');
 };
 
-reportSchema.statics.getReportsByUser = function(userId, limit = 100) {
-  return this.find({ userId })
-    .sort({ createdAt: -1 })
-    .limit(limit);
-};
-
+/**
+ * Gets all reports that are currently pending review.
+ * @param {number} limit The maximum number of reports to return.
+ * @returns {Promise<Array>} A promise that resolves to an array of pending reports.
+ */
 reportSchema.statics.getPendingReports = function(limit = 100) {
   return this.find({ status: 'pending' })
     .sort({ createdAt: -1 })
@@ -192,20 +133,26 @@ reportSchema.statics.getPendingReports = function(limit = 100) {
     .populate('userId', 'username email');
 };
 
-// Instance methods
+
+// --- INSTANCE METHODS ---
+// Methods available on individual report documents.
+
+/**
+ * Marks a report as reviewed by an administrator.
+ * @param {string} adminId The MongoDB ObjectId of the admin user.
+ * @param {string} decision The review decision ('confirmed', 'false_positive', 'dismissed').
+ * @param {string} notes Optional notes from the administrator.
+ * @returns {Promise<Report>} The updated report document.
+ */
 reportSchema.methods.markAsReviewed = function(adminId, decision, notes = '') {
+  this.status = decision;
   this.adminReview = {
     reviewedBy: adminId,
     reviewedAt: new Date(),
     decision,
+
     notes
   };
-
-  // Update status based on decision
-  if (['confirmed', 'false_positive', 'dismissed'].includes(decision)) {
-    this.status = decision === 'confirmed' ? 'confirmed' : decision;
-  }
-
   return this.save();
 };
 

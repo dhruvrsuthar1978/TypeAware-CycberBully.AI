@@ -1,6 +1,10 @@
 # TypeAware AI Requirements
 # Core Python dependencies for the AI detection system
 
+# Web Framework
+fastapi>=0.68.0
+uvicorn[standard]>=0.15.0
+
 # Data processing and analysis
 numpy>=1.21.0
 pandas>=1.3.0
@@ -11,8 +15,16 @@ textblob>=0.17.1
 fuzzywuzzy>=0.18.0
 python-levenshtein>=0.12.2
 
-# Machine Learning (optional, for future enhancements)
+# Machine Learning
 scikit-learn>=1.0.0
+joblib>=1.1.0
+imbalanced-learn>=0.9.0
+xgboost>=1.6.0
+
+# Deep Learning (for advanced text classification)
+torch>=1.12.0
+transformers>=4.21.0
+datasets>=2.4.0
 
 # Web and API support
 requests>=2.26.0
