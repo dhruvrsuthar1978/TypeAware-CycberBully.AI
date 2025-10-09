@@ -5,14 +5,12 @@ const extensionActivitySchema = new mongoose.Schema({
   // Extension identification
   extensionId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
 
   // User identification
   userUuid: {
-    type: String,
-    index: true
+    type: String
   },
 
   // Activity details
@@ -81,8 +79,7 @@ const extensionActivitySchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     required: true,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
 
   duration: {

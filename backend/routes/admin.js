@@ -1,102 +1,125 @@
-// backend/routes/admin.js
-
 const express = require('express');
+const User = require('../models/User');
+const adminMiddleware = require('../middleware/adminMiddleware');
+const protect = require('../middleware/authMiddleware');
+
 const router = express.Router();
 
-// Import the AdminController instance
-const adminController = require('../controllers/adminController');
-// Import middleware (assuming correct exports from auth.js)
-const protect = require('../middleware/authMiddleware');
-const requireAdmin = require('../middleware/adminMiddleware');
-const loggingService = require('../middleware/logging'); 
+// @route   POST /api/admin/create-user
+// @desc    Create admin user programmatically (for testing)
+// @access  Public (only for testing purposes)
+router.post('/create-user', async (req, res) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
 
-// ---------------------------------------------
-// GLOBAL ADMIN MIDDLEWARE (Recommended)
-// ---------------------------------------------
+    // Basic validation
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Email, password, firstName, and lastName are required'
+      });
+    }
 
-// Ensure all routes require authentication and admin privileges
-router.use(protect); 
-router.use(requireAdmin); 
-router.use(loggingService.auditLogger()); 
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        error: 'User Already Exists',
+        message: 'User with this email already exists'
+      });
+    }
 
-// ---------------------------------------------
-// DASHBOARD & ANALYTICS ROUTES
-// ---------------------------------------------
+    // Create admin user (password will be hashed by User model pre-save middleware)
+    const username = `${firstName.trim()}_${lastName.trim()}`.toLowerCase();
+    const adminUser = new User({
+      username: username,
+      email: email.toLowerCase().trim(),
+      password: password,
+      role: 'admin',
+      moderation: { status: 'active' },
+      emailVerified: true,
+      isActive: true
+    });
 
-// @route GET /api/admin/dashboard (Maps to getDashboard)
-router.get('/dashboard', adminController.getDashboard);
+    await adminUser.save();
 
-// @route GET /api/admin/analytics/system (Maps to getSystemAnalytics)
-router.get('/analytics/system', adminController.getSystemAnalytics);
+    res.status(201).json({
+      message: 'Admin user created successfully',
+      user: {
+        id: adminUser._id,
+        email: adminUser.email,
+        firstName: adminUser.firstName,
+        lastName: adminUser.lastName,
+        role: adminUser.role
+      }
+    });
 
-// @route GET /api/admin/analytics/accuracy (Maps to getDetectionAccuracy)
-router.get('/analytics/accuracy', adminController.getDetectionAccuracy);
+  } catch (error) {
+    console.error('Create admin user error:', error);
+    res.status(500).json({
+      error: 'Creation Failed',
+      message: 'Unable to create admin user'
+    });
+  }
+});
 
-// @route GET /api/admin/analytics/platform-stats (Maps to getPlatformStats)
-router.get('/analytics/platform-stats', adminController.getPlatformStats);
+// @route   GET /api/admin/users
+// @desc    Get all users (admin only)
+// @access  Private (Admin)
+router.get('/users', protect, adminMiddleware, async (req, res) => {
+  try {
+    const users = await User.find({}, '-passwordHash').sort({ createdAt: -1 });
+    res.json({ users });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      error: 'Fetch Failed',
+      message: 'Unable to fetch users'
+    });
+  }
+});
 
-// ---------------------------------------------
-// REPORT MANAGEMENT ROUTES
-// ---------------------------------------------
+// @route   GET /api/admin/stats
+// @desc    Get admin statistics
+// @access  Private (Admin)
+router.get('/stats', protect, adminMiddleware, async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const adminUsers = await User.countDocuments({ role: 'admin' });
+    const activeUsers = await User.countDocuments({ status: 'active' });
 
-// @route GET /api/admin/reports/pending (Maps to getPendingReports)
-router.get('/reports/pending', adminController.getPendingReports);
+    res.json({
+      stats: {
+        totalUsers,
+        adminUsers,
+        activeUsers,
+        regularUsers: totalUsers - adminUsers
+      }
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({
+      error: 'Stats Failed',
+      message: 'Unable to fetch statistics'
+    });
+  }
+});
 
-// @route GET /api/admin/reports/flagged (Maps to getFlaggedReports)
-router.get('/reports/flagged', adminController.getFlaggedReports);
+// @route   GET /api/admin/reports
+// @desc    Get all reports (admin only)
+// @access  Private (Admin)
+router.get('/reports', protect, adminMiddleware, async (req, res) => {
+  try {
+    const Report = require('../models/Report');
+    const reports = await Report.find().populate('userId', 'email firstName lastName').sort({ createdAt: -1 });
+    res.json({ reports });
+  } catch (error) {
+    console.error('Get reports error:', error);
+    res.status(500).json({
+      error: 'Fetch Failed',
+      message: 'Unable to fetch reports'
+    });
+  }
+});
 
-// @route PUT /api/admin/reports/:reportId/review (Maps to reviewReport)
-router.put('/reports/:reportId/review', adminController.reviewReport);
-
-// @route POST /api/admin/reports/bulk-review (Maps to bulkReviewReports)
-router.post('/reports/bulk-review', adminController.bulkReviewReports);
-
-// @route DELETE /api/admin/reports/:reportId (Maps to deleteReport)
-router.delete('/reports/:reportId', adminController.deleteReport);
-
-// @route GET /api/admin/reports/export (Maps to exportReports)
-router.get('/reports/export', adminController.exportReports);
-
-
-// ---------------------------------------------
-// USER & SYSTEM MANAGEMENT ROUTES
-// ---------------------------------------------
-
-// @route GET /api/admin/users/flagged (Maps to getFlaggedUsers)
-router.get('/users/flagged', adminController.getFlaggedUsers);
-
-// @route GET /api/admin/users/:userId (Maps to getUserDetails)
-router.get('/users/:userId', adminController.getUserDetails);
-
-// @route PUT /api/admin/users/:userId/status (Maps to updateUserStatus)
-router.put('/users/:userId/status', adminController.updateUserStatus);
-
-// @route GET /api/admin/logs (Maps to getAdminLogs)
-router.get('/logs', adminController.getAdminLogs);
-
-// @route GET /api/admin/queue (Maps to getModerationQueue)
-router.get('/queue', adminController.getModerationQueue);
-
-// @route PUT /api/admin/settings (Maps to updateSystemSettings)
-router.put('/settings', adminController.updateSystemSettings);
-
-
-// ---------------------------------------------
-// MODERATION ROUTES
-// ---------------------------------------------
-
-const moderationController = require('../controllers/moderationController');
-
-// Apply manual moderation action
-router.post('/moderation/apply-action/:userId', moderationController.applyModerationAction);
-
-// Get user moderation status
-router.get('/moderation/status/:userId', moderationController.getUserModerationStatus);
-
-// Check expired suspensions and reactivate users
-router.post('/moderation/check-expired-suspensions', moderationController.checkExpiredSuspensions);
-
-// ---------------------------------------------
-// EXPORT
-// ---------------------------------------------
 module.exports = router;

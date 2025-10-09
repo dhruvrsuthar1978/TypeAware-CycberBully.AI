@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema(
       totalViolations: { type: Number, default: 0, min: 0 },
       warningCount: { type: Number, default: 0, min: 0 },
       suspensionCount: { type: Number, default: 0, min: 0 },
+      messagesScanned: { type: Number, default: 0, min: 0 },
+      threatsDetected: { type: Number, default: 0, min: 0 },
+      reportsSubmitted: { type: Number, default: 0, min: 0 },
+      positivityScore: { type: Number, default: 98, min: 0, max: 100 },
     },
     moderation: {
       status: {

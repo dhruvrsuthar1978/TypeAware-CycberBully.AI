@@ -1,4 +1,4 @@
-// services/analyticsService.js
+// services/analyticsService-enhanced.js
 
 const Analytics = require('../models/Analytics');
 const Report = require('../models/Report');
@@ -291,6 +291,228 @@ class AnalyticsService {
       console.error('Error exporting analytics data:', error);
       throw error;
     }
+  }
+
+  // ================================
+  // 🏠 DASHBOARD KPI METRICS
+  // ================================
+  async getDashboardKPIs() {
+    try {
+      // Get pending reports count
+      const pendingReports = await Report.countDocuments({ status: 'pending' });
+
+      // Get moderation actions in last 24 hours
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentReports = await Report.find({
+        createdAt: { $gte: yesterday },
+        status: { $in: ['confirmed', 'dismissed'] }
+      });
+
+      const moderationActions = {
+        total: recentReports.length,
+        warnings: recentReports.filter(r => r.adminReview?.decision === 'confirmed' && r.content.severity === 'medium').length,
+        bans: recentReports.filter(r => r.adminReview?.decision === 'confirmed' && r.content.severity === 'critical').length
+      };
+
+      // Get active users in last 24 hours
+      const activeUsers = await User.countDocuments({
+        'stats.lastActivity': { $gte: yesterday }
+      });
+
+      // System status (simplified - could be enhanced with health checks)
+      const systemStatus = 'healthy'; // Could check database connectivity, etc.
+
+      return {
+        pendingReports,
+        moderationActions,
+        activeUsers,
+        systemStatus,
+        lastUpdated: new Date()
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard KPIs:', error);
+      throw error;
+    }
+  }
+
+  // ================================
+  // 📋 MODERATION QUEUE
+  // ================================
+  async getModerationQueue(filters = {}, page = 1, limit = 20) {
+    try {
+      const skip = (page - 1) * limit;
+
+      // Build query based on filters
+      const query = { status: 'pending' };
+
+      if (filters.status && filters.status !== 'all') {
+        query.status = filters.status;
+      }
+      if (filters.severity && filters.severity !== 'all') {
+        query['content.severity'] = filters.severity;
+      }
+      if (filters.platform && filters.platform !== 'all') {
+        query['context.platform'] = filters.platform;
+      }
+
+      const reports = await Report.find(query)
+        .populate('userId', 'username email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const total = await Report.countDocuments(query);
+
+      return {
+        reports: reports.map(report => ({
+          id: report._id,
+          userId: report.userId?.username || 'Anonymous',
+          content: report.content.original,
+          reason: report.classification.category,
+          severity: report.content.severity,
+          platform: report.context.platform,
+          status: report.status,
+          createdAt: report.createdAt
+        })),
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      console.error('Error fetching moderation queue:', error);
+      throw error;
+    }
+  }
+
+  // ================================
+  // 📊 SYSTEM ANALYTICS DATA
+  // ================================
+  async getSystemAnalyticsData(timeframe = '30d') {
+    try {
+      const startDate = new Date(Date.now() - this.parseTimeframe(timeframe));
+
+      // Get abuse types data
+      const abuseTypesPipeline = [
+        {
+          $match: {
+            createdAt: { $gte: startDate }
+          }
+        },
+        {
+          $group: {
+            _id: '$classification.category',
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $sort: { count: -1 }
+        }
+      ];
+
+      const abuseTypesData = await Report.aggregate(abuseTypesPipeline);
+      const abuseTypes = {};
+      abuseTypesData.forEach(item => {
+        abuseTypes[item._id || 'unknown'] = item.count;
+      });
+
+      // Get monthly growth data (last 6 months)
+      const monthlyGrowth = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthStart = new Date();
+        monthStart.setMonth(monthStart.getMonth() - i, 1);
+        monthStart.setHours(0, 0, 0, 0);
+
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1, 0);
+        monthEnd.setHours(23, 59, 59, 999);
+
+        const reportsCount = await Report.countDocuments({
+          createdAt: { $gte: monthStart, $lte: monthEnd }
+        });
+
+        const usersCount = await User.countDocuments({
+          createdAt: { $gte: monthStart, $lte: monthEnd }
+        });
+
+        monthlyGrowth.push({
+          month: monthStart.toLocaleDateString('en-US', { month: 'short' }),
+          reports: reportsCount,
+          users: usersCount
+        });
+      }
+
+      return {
+        abuseTypes,
+        monthlyGrowth,
+        lastUpdated: new Date()
+      };
+    } catch (error) {
+      console.error('Error fetching system analytics data:', error);
+      throw error;
+    }
+  }
+
+  // ================================
+  // 👥 USER MANAGEMENT DATA
+  // ================================
+  async getUserManagementData(search = '', status = 'all', page = 1, limit = 20) {
+    try {
+      const skip = (page - 1) * limit;
+
+      // Build query
+      const query = {};
+      if (search) {
+        query.$or = [
+          { username: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ];
+      }
+      if (status && status !== 'all') {
+        query.status = status;
+      }
+
+      const users = await User.find(query)
+        .select('username email stats status createdAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const total = await User.countDocuments(query);
+
+      return {
+        users: users.map(user => ({
+          userId: user._id,
+          username: user.username,
+          email: user.email,
+          totalReports: user.stats?.reportsSubmitted || 0,
+          riskLevel: this.calculateRiskLevel(user.stats),
+          status: user.status || 'active',
+          lastActive: user.stats?.lastActivity || user.createdAt
+        })),
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      console.error('Error fetching user management data:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to calculate risk level based on user stats
+  calculateRiskLevel(stats) {
+    if (!stats) return 'Low';
+
+    const reports = stats.reportsSubmitted || 0;
+    const threats = stats.threatsDetected || 0;
+
+    if (reports >= 10 || threats >= 5) return 'High';
+    if (reports >= 5 || threats >= 2) return 'Medium';
+    return 'Low';
   }
 
   // Helper method to parse timeframe strings

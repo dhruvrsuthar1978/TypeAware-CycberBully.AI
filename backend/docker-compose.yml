@@ -19,6 +19,11 @@ services:
       - BCRYPT_ROUNDS=12
       - DEFAULT_ADMIN_EMAIL=${DEFAULT_ADMIN_EMAIL:-admin@typeaware.com}
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-admin123456}
+      - SMTP_HOST=${SMTP_HOST:-smtp.example.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-your-email@example.com}
+      - SMTP_PASS=${SMTP_PASS:-your-email-password}
     depends_on:
       - typeaware-mongo
     volumes:

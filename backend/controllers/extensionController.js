@@ -1,14 +1,16 @@
 // controllers/extensionController.js
 const extensionService = require('../services/extensionService');
 const reportService = require('../services/reportService');
-const { createResponse } = require('../utils/responseUtils');
+const { createResponse, createErrorResponse } = require('../utils/responseUtils');
 const { EXTENSION_CONFIG } = require('../config/constants');
 
 class ExtensionController {
   // Extension heartbeat/ping endpoint
   async ping(req, res) {
     try {
-      const { extensionId, version, userUuid } = req.headers;
+      const extensionId = req.headers['x-extension-id'];
+      const version = req.headers['x-extension-version'];
+      const userUuid = req.headers['x-user-uuid'];
       
       const heartbeat = await extensionService.recordHeartbeat({
         extensionId: extensionId || 'unknown',
@@ -18,10 +20,10 @@ class ExtensionController {
         userAgent: req.get('User-Agent')
       });
 
-      res.json(createResponse(true, 'Heartbeat recorded', heartbeat));
+      res.json(createResponse('Heartbeat recorded', heartbeat));
     } catch (error) {
       console.error('Error in extension ping:', error);
-      res.status(500).json(createResponse(false, 'Heartbeat failed'));
+      res.status(500).json(createErrorResponse('Heartbeat failed', 'Unable to record heartbeat', { error: error.message }));
     }
   }
 
@@ -44,7 +46,7 @@ class ExtensionController {
       const extensionVersion = req.headers['x-extension-version'];
 
       if (!reporterUuid) {
-        return res.status(400).json(createResponse(false, 'User UUID is required'));
+        return res.status(400).json(createErrorResponse('Validation Error', 'User UUID is required'));
       }
 
       // Create report data
@@ -81,14 +83,14 @@ class ExtensionController {
         ip: req.ip
       });
 
-      res.status(201).json(createResponse(true, 'Report submitted successfully', {
+      res.status(201).json(createResponse('Report submitted successfully', {
         reportId: report._id,
         submittedAt: report.createdAt,
         status: report.status
       }));
     } catch (error) {
       console.error('Error submitting extension report:', error);
-      res.status(500).json(createResponse(false, 'Failed to submit report'));
+      res.status(500).json(createErrorResponse('Report Submission Error', 'Failed to submit report'));
     }
   }
 
@@ -100,11 +102,11 @@ class ExtensionController {
       const reporterUuid = req.headers['x-user-uuid'];
 
       if (!Array.isArray(reports) || reports.length === 0) {
-        return res.status(400).json(createResponse(false, 'Reports array is required'));
+        return res.status(400).json(createErrorResponse('Validation Error', 'Reports array is required'));
       }
 
       if (reports.length > 50) {
-        return res.status(400).json(createResponse(false, 'Maximum 50 reports allowed per batch'));
+        return res.status(400).json(createErrorResponse('Validation Error', 'Maximum 50 reports allowed per batch'));
       }
 
       const results = [];
@@ -152,7 +154,7 @@ class ExtensionController {
         ip: req.ip
       });
 
-      res.json(createResponse(true, 'Batch reports processed', {
+      res.json(createResponse('Batch reports processed', {
         totalSubmitted: reports.length,
         successCount,
         errorCount,
@@ -160,7 +162,7 @@ class ExtensionController {
       }));
     } catch (error) {
       console.error('Error in batch report submission:', error);
-      res.status(500).json(createResponse(false, 'Failed to process batch reports'));
+      res.status(500).json(createErrorResponse('Batch Report Error', 'Failed to process batch reports'));
     }
   }
 
@@ -170,10 +172,10 @@ class ExtensionController {
       const extensionVersion = req.headers['x-extension-version'];
       const config = await extensionService.getExtensionConfig(extensionVersion);
 
-      res.json(createResponse(true, 'Configuration retrieved', config));
+      res.json(createResponse('Configuration retrieved', config));
     } catch (error) {
       console.error('Error getting extension config:', error);
-      res.status(500).json(createResponse(false, 'Failed to get configuration'));
+      res.status(500).json(createErrorResponse('Configuration Error', 'Failed to get configuration'));
     }
   }
 
@@ -184,15 +186,15 @@ class ExtensionController {
       const { settings } = req.body;
 
       if (!userUuid) {
-        return res.status(400).json(createResponse(false, 'User UUID is required'));
+        return res.status(400).json(createErrorResponse('Validation Error', 'User UUID is required'));
       }
 
       const updatedSettings = await extensionService.updateUserSettings(userUuid, settings);
 
-      res.json(createResponse(true, 'Settings updated successfully', updatedSettings));
+      res.json(createResponse('Settings updated successfully', updatedSettings));
     } catch (error) {
       console.error('Error updating extension settings:', error);
-      res.status(500).json(createResponse(false, 'Failed to update settings'));
+      res.status(500).json(createErrorResponse('Settings Error', 'Failed to update settings'));
     }
   }
 
@@ -202,15 +204,15 @@ class ExtensionController {
       const userUuid = req.headers['x-user-uuid'];
 
       if (!userUuid) {
-        return res.status(400).json(createResponse(false, 'User UUID is required'));
+        return res.status(400).json(createErrorResponse('Validation Error', 'User UUID is required'));
       }
 
       const settings = await extensionService.getUserSettings(userUuid);
 
-      res.json(createResponse(true, 'Settings retrieved', settings));
+      res.json(createResponse('Settings retrieved', settings));
     } catch (error) {
       console.error('Error getting extension settings:', error);
-      res.status(500).json(createResponse(false, 'Failed to get settings'));
+      res.status(500).json(createErrorResponse('Settings Error', 'Failed to get settings'));
     }
   }
 
@@ -221,19 +223,19 @@ class ExtensionController {
       const { lastSyncTimestamp, localData } = req.body;
 
       if (!userUuid) {
-        return res.status(400).json(createResponse(false, 'User UUID is required'));
+        return res.status(400).json(createErrorResponse('Validation Error', 'User UUID is required'));
       }
 
       const syncResult = await extensionService.syncUserData(
-        userUuid, 
+        userUuid,
         lastSyncTimestamp ? new Date(lastSyncTimestamp) : null,
         localData
       );
 
-      res.json(createResponse(true, 'Data synchronized', syncResult));
+      res.json(createResponse('Data synchronized', syncResult));
     } catch (error) {
       console.error('Error syncing extension data:', error);
-      res.status(500).json(createResponse(false, 'Failed to sync data'));
+      res.status(500).json(createErrorResponse('Sync Error', 'Failed to sync data'));
     }
   }
 
@@ -244,15 +246,15 @@ class ExtensionController {
       const { timeframe = '30d' } = req.query;
 
       if (!userUuid) {
-        return res.status(400).json(createResponse(false, 'User UUID is required'));
+        return res.status(400).json(createErrorResponse('Validation Error', 'User UUID is required'));
       }
 
       const stats = await extensionService.getUserStatistics(userUuid, timeframe);
 
-      res.json(createResponse(true, 'Statistics retrieved', stats));
+      res.json(createResponse('Statistics retrieved', stats));
     } catch (error) {
       console.error('Error getting user stats:', error);
-      res.status(500).json(createResponse(false, 'Failed to get statistics'));
+      res.status(500).json(createErrorResponse('Statistics Error', 'Failed to get statistics'));
     }
   }
 
@@ -262,10 +264,10 @@ class ExtensionController {
       const currentVersion = req.headers['x-extension-version'] || '1.0.0';
       const updateInfo = await extensionService.checkForUpdates(currentVersion);
 
-      res.json(createResponse(true, 'Update check completed', updateInfo));
+      res.json(createResponse('Update check completed', updateInfo));
     } catch (error) {
       console.error('Error checking for updates:', error);
-      res.status(500).json(createResponse(false, 'Failed to check updates'));
+      res.status(500).json(createErrorResponse('Update Check Error', 'Failed to check updates'));
     }
   }
 
@@ -291,10 +293,10 @@ class ExtensionController {
         installedAt: new Date()
       });
 
-      res.status(201).json(createResponse(true, 'Installation registered', installation));
+      res.status(201).json(createResponse('Installation registered', installation));
     } catch (error) {
       console.error('Error registering installation:', error);
-      res.status(500).json(createResponse(false, 'Failed to register installation'));
+      res.status(500).json(createErrorResponse('Installation Error', 'Failed to register installation'));
     }
   }
 
@@ -329,12 +331,12 @@ class ExtensionController {
         timestamp: new Date()
       });
 
-      res.json(createResponse(true, 'Error reported successfully', {
+      res.json(createResponse('Error reported successfully', {
         errorId: errorReport._id
       }));
     } catch (error) {
       console.error('Error reporting extension error:', error);
-      res.status(500).json(createResponse(false, 'Failed to report error'));
+      res.status(500).json(createErrorResponse('Error Reporting Error', 'Failed to report error'));
     }
   }
 
@@ -344,10 +346,10 @@ class ExtensionController {
       const version = req.headers['x-extension-version'];
       const patterns = await extensionService.getDetectionPatterns(version);
 
-      res.json(createResponse(true, 'Detection patterns retrieved', patterns));
+      res.json(createResponse('Detection patterns retrieved', patterns));
     } catch (error) {
       console.error('Error getting detection patterns:', error);
-      res.status(500).json(createResponse(false, 'Failed to get detection patterns'));
+      res.status(500).json(createErrorResponse('Detection Patterns Error', 'Failed to get detection patterns'));
     }
   }
 
@@ -375,10 +377,10 @@ class ExtensionController {
         ip: req.ip
       });
 
-      res.json(createResponse(true, 'Analytics submitted successfully'));
+      res.json(createResponse('Analytics submitted successfully'));
     } catch (error) {
       console.error('Error submitting analytics:', error);
-      res.status(500).json(createResponse(false, 'Failed to submit analytics'));
+      res.status(500).json(createErrorResponse('Analytics Error', 'Failed to submit analytics'));
     }
   }
 
@@ -389,22 +391,22 @@ class ExtensionController {
       const extensionId = req.headers['x-extension-id'];
 
       if (!apiKey) {
-        return res.status(401).json(createResponse(false, 'API key required'));
+        return res.status(401).json(createErrorResponse('Authentication Error', 'API key required'));
       }
 
       const validation = await extensionService.validateApiKey(apiKey, extensionId);
 
       if (validation.valid) {
-        res.json(createResponse(true, 'API key valid', {
+        res.json(createResponse('API key valid', {
           permissions: validation.permissions,
           rateLimit: validation.rateLimit
         }));
       } else {
-        res.status(401).json(createResponse(false, 'Invalid API key'));
+        res.status(401).json(createErrorResponse('Authentication Error', 'Invalid API key'));
       }
     } catch (error) {
       console.error('Error validating API key:', error);
-      res.status(500).json(createResponse(false, 'API key validation failed'));
+      res.status(500).json(createErrorResponse('API Key Validation Error', 'API key validation failed'));
     }
   }
 
@@ -412,11 +414,11 @@ class ExtensionController {
   async getHealth(req, res) {
     try {
       const health = await extensionService.getServiceHealth();
-      
-      res.json(createResponse(true, 'Extension service health', health));
+
+      res.json(createResponse('Extension service health', health));
     } catch (error) {
       console.error('Error getting extension health:', error);
-      res.status(500).json(createResponse(false, 'Failed to get health status'));
+      res.status(500).json(createErrorResponse('Health Check Error', 'Failed to get health status'));
     }
   }
 
@@ -424,11 +426,11 @@ class ExtensionController {
   async getSupportedPlatforms(req, res) {
     try {
       const platforms = await extensionService.getSupportedPlatforms();
-      
-      res.json(createResponse(true, 'Supported platforms retrieved', platforms));
+
+      res.json(createResponse('Supported platforms retrieved', platforms));
     } catch (error) {
       console.error('Error getting supported platforms:', error);
-      res.status(500).json(createResponse(false, 'Failed to get supported platforms'));
+      res.status(500).json(createErrorResponse('Platforms Error', 'Failed to get supported platforms'));
     }
   }
 
@@ -460,12 +462,12 @@ class ExtensionController {
         ip: req.ip
       });
 
-      res.status(201).json(createResponse(true, 'Feedback submitted successfully', {
+      res.status(201).json(createResponse('Feedback submitted successfully', {
         feedbackId: feedback._id
       }));
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      res.status(500).json(createResponse(false, 'Failed to submit feedback'));
+      res.status(500).json(createErrorResponse('Feedback Error', 'Failed to submit feedback'));
     }
   }
 }

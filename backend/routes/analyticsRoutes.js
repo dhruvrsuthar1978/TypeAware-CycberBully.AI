@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('../controllers/analyticsController');
+const protect = require('../middleware/authMiddleware');
 
 // Each route explicitly calls the controller method
 router.get('/overview', (req, res) => analyticsController.getSystemAnalytics(req, res));
@@ -13,6 +14,11 @@ router.get('/user-engagement', (req, res) => analyticsController.getUserEngageme
 router.get('/top-flagged-users', (req, res) => analyticsController.getTopFlaggedUsers(req, res));
 router.get('/recently-flagged', (req, res) => analyticsController.getRecentlyFlaggedContent(req, res));
 router.get('/dashboard-summary', (req, res) => analyticsController.getDashboardSummary(req, res));
+router.get('/reports', (req, res) => analyticsController.getSystemAnalytics(req, res));
+router.get('/users', (req, res) => analyticsController.getUserEngagementStats(req, res));
 router.get('/export', (req, res) => analyticsController.exportAnalyticsData(req, res));
+
+// User-specific analytics (requires authentication)
+router.get('/user', protect, (req, res) => analyticsController.getUserAnalytics(req, res));
 
 module.exports = router;

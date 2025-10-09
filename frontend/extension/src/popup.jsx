@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Shield, Activity, Settings, BarChart3, AlertTriangle } from 'lucide-react';
+import { Shield, Activity, Settings, BarChart3, AlertTriangle, Zap, TrendingUp } from 'lucide-react';
 
 const Popup = () => {
   const [stats, setStats] = useState({
@@ -51,7 +51,7 @@ const Popup = () => {
   };
 
   const openWebApp = () => {
-    chrome.tabs.create({ url: 'https://typeaware.lovable.app' });
+    chrome.tabs.create({ url: 'http://localhost:5173' });
   };
 
   const clearData = async () => {
@@ -66,87 +66,127 @@ const Popup = () => {
   };
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2">
-          <Shield className="w-6 h-6 text-blue-600" />
-          <h1 className="text-lg font-bold text-gray-800">TypeAware</h1>
+    <div className="w-full h-full relative overflow-hidden">
+      {/* Aurora Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600 opacity-90"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+      
+      {/* Animated Dots Pattern */}
+      <div className="absolute inset-0 opacity-20" style={{
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)',
+        backgroundSize: '20px 20px'
+      }}></div>
+
+      <div className="relative p-4 h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-2">
+            <div className="relative">
+              <Shield className="w-7 h-7 text-white relative z-10" />
+              <div className="absolute inset-0 bg-white/40 rounded-full blur-md"></div>
+            </div>
+            <h1 className="text-xl font-bold text-white">TypeAware</h1>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className={`w-2.5 h-2.5 rounded-full ${stats.isEnabled ? 'bg-green-400' : 'bg-red-400'} shadow-lg`} style={{
+              boxShadow: stats.isEnabled ? '0 0 10px rgba(74, 222, 128, 0.8)' : '0 0 10px rgba(248, 113, 113, 0.8)'
+            }}></div>
+            <button
+              onClick={toggleExtension}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold ${
+                stats.isEnabled 
+                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                  : 'bg-red-500 text-white hover:bg-red-600'
+              } transition-all shadow-lg hover:scale-105`}
+            >
+              {stats.isEnabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full ${stats.isEnabled ? 'bg-green-500' : 'bg-red-500'}`}></div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-white/20 backdrop-blur-xl rounded-2xl p-4 border border-white/30 shadow-lg hover:scale-105 transition-transform">
+            <div className="flex items-center justify-between mb-2">
+              <Activity className="w-5 h-5 text-cyan-300" />
+              <span className="text-2xl font-bold text-white">{stats.totalScanned}</span>
+            </div>
+            <p className="text-xs text-white/90 font-medium">Messages Scanned</p>
+          </div>
+          
+          <div className="bg-white/20 backdrop-blur-xl rounded-2xl p-4 border border-white/30 shadow-lg hover:scale-105 transition-transform">
+            <div className="flex items-center justify-between mb-2">
+              <AlertTriangle className="w-5 h-5 text-red-300" />
+              <span className="text-2xl font-bold text-white">{stats.threatsDetected}</span>
+            </div>
+            <p className="text-xs text-white/90 font-medium">Threats Detected</p>
+          </div>
+        </div>
+
+        {/* Recent Detections */}
+        <div className="bg-white/20 backdrop-blur-xl rounded-2xl p-4 mb-4 border border-white/30 shadow-lg">
+          <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Recent Detections
+          </h3>
+          {recentDetections.length > 0 ? (
+            <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+              {recentDetections.map((detection, index) => (
+                <div key={index} className="bg-red-500/30 backdrop-blur-sm border border-red-400/50 rounded-xl p-2.5 hover:bg-red-500/40 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-red-100">{detection.types?.[0] || 'inappropriate'}</span>
+                    <span className="text-xs text-red-200 font-medium">{detection.platform}</span>
+                  </div>
+                  <p className="text-xs text-red-100 truncate">
+                    {detection.content.substring(0, 45)}...
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Zap className="w-8 h-8 text-white/50 mx-auto mb-2" />
+              <p className="text-xs text-white/70">No recent detections</p>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
           <button
-            onClick={toggleExtension}
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              stats.isEnabled 
-                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                : 'bg-red-100 text-red-700 hover:bg-red-200'
-            } transition-colors`}
+            onClick={openWebApp}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl py-3 px-4 text-sm font-bold transition-all flex items-center justify-center space-x-2 shadow-lg hover:scale-105"
           >
-            {stats.isEnabled ? 'ON' : 'OFF'}
+            <BarChart3 className="w-4 h-4" />
+            <span>Open Dashboard</span>
+          </button>
+          
+          <button
+            onClick={clearData}
+            className="w-full bg-white/20 backdrop-blur-xl hover:bg-white/30 text-white rounded-xl py-3 px-4 text-sm font-bold transition-all flex items-center justify-center space-x-2 border border-white/30 shadow-lg hover:scale-105"
+          >
+            <Settings className="w-4 h-4" />
+            <span>Clear Data</span>
           </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white rounded-lg p-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <Activity className="w-5 h-5 text-blue-500" />
-            <span className="text-lg font-bold text-gray-800">{stats.totalScanned}</span>
-          </div>
-          <p className="text-xs text-gray-600 mt-1">Messages Scanned</p>
-        </div>
-        
-        <div className="bg-white rounded-lg p-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            <span className="text-lg font-bold text-gray-800">{stats.threatsDetected}</span>
-          </div>
-          <p className="text-xs text-gray-600 mt-1">Threats Detected</p>
-        </div>
-      </div>
-
-      {/* Recent Detections */}
-      <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-800 mb-3">Recent Detections</h3>
-        {recentDetections.length > 0 ? (
-          <div className="space-y-2">
-            {recentDetections.map((detection, index) => (
-              <div key={index} className="bg-red-50 border border-red-200 rounded p-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-red-700">{detection.type}</span>
-                  <span className="text-xs text-red-600">{detection.platform}</span>
-                </div>
-                <p className="text-xs text-red-600 mt-1 truncate">
-                  {detection.content.substring(0, 50)}...
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 text-center py-2">No recent detections</p>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="space-y-2">
-        <button
-          onClick={openWebApp}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 px-4 text-sm font-medium transition-colors flex items-center justify-center space-x-2"
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span>Open Dashboard</span>
-        </button>
-        
-        <button
-          onClick={clearData}
-          className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg py-2 px-4 text-sm font-medium transition-colors flex items-center justify-center space-x-2"
-        >
-          <Settings className="w-4 h-4" />
-          <span>Clear Data</span>
-        </button>
-      </div>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,5 +1,3 @@
-// server.js - Production-Ready TypeAware Backend
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,32 +6,26 @@ const compression = require('compression');
 const axios = require('axios');
 require('dotenv').config();
 
-// Import configurations and utilities
 const databaseConfig = require('./config/database');
-const jwtConfig = require('./config/jwt'); 
 const loggingService = require('./middleware/logging');
 const rateLimitingService = require('./middleware/rateLimiting');
 
-// Import routes (All verified to export router correctly)
 const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/user');
+const adminAuthRoutes = require('./routes/adminAuth');
+const userRoutes = require('./routes/userRoutes');
 const reportRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const extensionRoutes = require('./routes/extensionRoutes');
 
-// Import authentication middleware
 const protect = require('./middleware/authMiddleware');
 
-// Import services for initialization
 const emailService = require('./services/emailService');
-const contentModerationService = require('./services/contentModerationService'); 
+const contentModerationService = require('./services/contentModerationService');
+
+const aiController = require('./controllers/aiController');
 
 const app = express();
-
-// ============================================================================
-// SECURITY & MIDDLEWARE CONFIGURATION
-// ============================================================================
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -54,7 +46,6 @@ app.use(compression());
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-
     const allowedOrigins = [
       process.env.APP_URL || 'http://localhost:3000',
       'http://localhost:3000',
@@ -71,10 +62,9 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // Instead of throwing an error, return false to block the request without error
       callback(null, false);
     }
   },
@@ -97,7 +87,6 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Logging & rate limiting
 loggingService.initialize();
 app.use(loggingService.requestIdMiddleware());
 app.use(loggingService.accessLogger());
@@ -109,25 +98,19 @@ app.use(loggingService.rateLimitLogger());
 app.use(rateLimitingService.healthCheckBypass());
 app.use(rateLimitingService.generalApiLimiter());
 
-// ============================================================================
-// DATABASE CONNECTION
-// ============================================================================
 
 async function initializeDatabase() {
   try {
-    console.log('🔌 Connecting to database...');
+    console.log('Connecting to database...');
     await databaseConfig.connect();
     await databaseConfig.createIndexes();
-    console.log('✅ Database connected and indexes created');
+    console.log('Database connected and indexes created');
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    console.error('Database connection failed:', error);
     process.exit(1);
   }
 }
 
-// ============================================================================
-// API ROUTES
-// ============================================================================
 
 app.get('/', (req, res) => {
   res.json({
@@ -145,18 +128,13 @@ app.get('/health', async (req, res) => {
       loggingService.healthCheck()
     ]);
 
-    const overallHealth =
-      dbHealth.status === 'connected' &&
-      loggingHealth.status === 'healthy' ? 'healthy' : 'degraded';
+    const overallHealth = dbHealth.status === 'connected' && loggingHealth.status === 'healthy'
+      ? 'healthy' : 'degraded';
 
     res.json({
       status: overallHealth,
       timestamp: new Date().toISOString(),
-      services: {
-        database: dbHealth,
-        email: emailHealth,
-        logging: loggingHealth
-      },
+      services: { database: dbHealth, email: emailHealth, logging: loggingHealth },
       environment: process.env.NODE_ENV || 'development',
       version: process.env.APP_VERSION || '1.0.0'
     });
@@ -188,8 +166,8 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Mount API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminAuthRoutes);
 app.use('/api/users', protect, userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
@@ -197,72 +175,44 @@ app.use('/api/analytics', protect, analyticsRoutes);
 app.use('/api/extension', extensionRoutes);
 app.use('/api/ai', require('./routes/aiRoutes'));
 
-// ============================================================================
-// AI INTEGRATION ROUTE
-// ============================================================================
+// Proxy routes for frontend compatibility
+app.post('/api/analyze', aiController.analyzeContent);
+app.post('/api/rephrase', aiController.getRephrasingSuggestions);
 
-app.post('/api/ai/predict', async (req, res) => {
-  try {
-    const input = req.body;
 
-    // Call AI service (Python FastAPI/Flask server)
-    const aiResponse = await axios.post(
-      process.env.AI_URL || 'http://localhost:8000/predict',
-      input
-    );
-
-    res.json(aiResponse.data);
-  } catch (error) {
-    // Log detailed AI service error, but return a generic 500
-    loggingService.logError('AI service error:', { error: error.message, stack: error.stack });
-    res.status(500).json({ error: 'AI service unavailable or request failed' });
-  }
-});
-
-// ============================================================================
-// ERROR HANDLERS (MUST BE LAST MIDDLEWARE)
-// ============================================================================
-
-// 404 Handler - Catch-all for undefined routes
+// 404 Handler
 app.use((req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
   error.status = 404;
   next(error);
 });
 
-// General Error Handler - Catches all errors passed with next(error)
+// General Error Handler
 app.use((error, req, res, next) => {
-  // Log the detailed error for backend tracking
-  // We wrap this logging call in a try/catch to ensure the server doesn't crash on logging failure
   try {
-      if (loggingService && loggingService.errorLogger) {
-          loggingService.logError(`[${error.status || 500}] ${error.message}`, {
-            stack: error.stack,
-            endpoint: req.originalUrl,
-            method: req.method,
-            ip: req.ip
-          });
-      }
+    if (loggingService && loggingService.errorLogger) {
+      loggingService.logError(`[${error.status || 500}] ${error.message}`, {
+        stack: error.stack,
+        endpoint: req.originalUrl,
+        method: req.method,
+        ip: req.ip
+      });
+    }
   } catch(e) {
-      console.error('CRITICAL LOGGING FAILURE:', e.message);
+    console.error('CRITICAL LOGGING FAILURE:', e.message);
   }
 
-  // Handle the "Router not exported" issue cleanly
   if (error.message.includes('Router.use() requires middleware function but got a Object')) {
-    const routeError = new Error('Server Configuration Error: A route file is not exporting its Express Router correctly. Check all route files for "module.exports = router;".');
+    const routeError = new Error('Server Configuration Error: A route file is not exporting its Express Router correctly.');
     routeError.status = 500;
-    
-    console.error('\n\n🚨 MAJOR CONFIG ERROR DETECTED: A route file is likely MISSING "module.exports = router;"\n\n');
-    
     return res.status(routeError.status).json({
       status: 'error',
       message: routeError.message,
-      hint: process.env.NODE_ENV !== 'production' ? 'Check all files imported by app.use() for the missing export.' : undefined,
+      hint: process.env.NODE_ENV !== 'production' ? 'Check all route files for "module.exports = router;"' : undefined,
       timestamp: new Date().toISOString()
     });
   }
 
-  // Send a generic, non-leaking error response in production
   const statusCode = error.status || 500;
   res.status(statusCode).json({
     status: 'error',
@@ -274,31 +224,34 @@ app.use((error, req, res, next) => {
 });
 
 
-// ============================================================================
-// SERVER START
-// ============================================================================
+const PORT = process.env.PORT || 5000;
 
-const PORT = process.env.PORT || 5001;
+module.exports = app;
 
-initializeDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Backend running on http://localhost:${PORT}`);
-    
-    // 🛑 FIX: Safely logging the startup event
-    try {
+if (process.env.NODE_ENV !== 'test') {
+  initializeDatabase().then(() => {
+    const server = app.listen(PORT, () => {
+      console.log(`Backend running on http://localhost:${PORT}`);
+      try {
         if (loggingService && loggingService.infoLogger) {
-            loggingService.logInfo(`Server started successfully on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode.`);
-        } else {
-            // Fallback console log for confirmation if the logger failed to initialize
-            console.log('✅ Server startup logged.');
+          loggingService.logInfo(`Server started successfully on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode.`);
         }
-    } catch (logError) {
-        console.error('❌ Failed to log server start event:', logError.message);
-    }
-  });
-})
-.catch(err => {
-    // Catch-all for unhandled rejection from initializeDatabase()
-    console.error('❌ Failed to start server after database connection failure.', err);
+      } catch (logError) {
+        console.error('Failed to log server start event:', logError.message);
+      }
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Please free it or change the PORT in .env`);
+        process.exit(1);
+      } else {
+        console.error('Server error:', err);
+        process.exit(1);
+      }
+    });
+  }).catch(err => {
+    console.error('Failed to start server after database connection failure.', err);
     process.exit(1);
-});
+  });
+}

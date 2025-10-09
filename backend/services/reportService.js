@@ -198,6 +198,51 @@ class ReportService {
     async deleteReport(reportId) {
         return await Report.findByIdAndDelete(reportId);
     }
+
+    async getReportStats() {
+        try {
+            const totalReports = await Report.countDocuments();
+            const pendingReports = await Report.countDocuments({ status: 'pending' });
+            const confirmedReports = await Report.countDocuments({ status: 'confirmed' });
+            const dismissedReports = await Report.countDocuments({ status: 'dismissed' });
+
+            const severityStats = await Report.aggregate([
+                {
+                    $group: {
+                        _id: '$content.severity',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            const categoryStats = await Report.aggregate([
+                {
+                    $group: {
+                        _id: '$classification.category',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            return {
+                total: totalReports,
+                pending: pendingReports,
+                confirmed: confirmedReports,
+                dismissed: dismissedReports,
+                severityBreakdown: severityStats.reduce((acc, stat) => {
+                    acc[stat._id] = stat.count;
+                    return acc;
+                }, {}),
+                categoryBreakdown: categoryStats.reduce((acc, stat) => {
+                    acc[stat._id] = stat.count;
+                    return acc;
+                }, {})
+            };
+        } catch (error) {
+            console.error('Error getting report stats:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new ReportService();

@@ -42,7 +42,7 @@ const Contact = () => {
                 <Phone className="w-5 h-5 text-primary" />
                 <div>
                   <p className="font-semibold">Phone</p>
-                  <p className="text-muted-foreground">+1 (555) 123-4567</p>
+                  <p className="text-muted-foreground">+91 xxxxxxxxxx</p>
                 </div>
               </div>
 
@@ -51,9 +51,9 @@ const Contact = () => {
                 <div>
                   <p className="font-semibold">Address</p>
                   <p className="text-muted-foreground">
-                    123 Tech Street<br />
-                    San Francisco, CA 94105<br />
-                    United States
+                    xxxxxxxxx<br />
+                    xxxxxxxxxx<br />
+                    xxxxxx
                   </p>
                 </div>
               </div>

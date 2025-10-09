@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TypeAware Icon Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      color: #1f2937;
+    }
+    h1 {
+      color: #4F46E5;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .icon-preview {
+      display: flex;
+      gap: 24px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .icon-item {
+      text-align: center;
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    canvas {
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      background: white;
+    }
+    button {
+      background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.2s;
+      margin: 5px;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    }
+    .instructions {
+      background: #f8fafc;
+      border-left: 4px solid #4F46E5;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 8px;
+    }
+    .success {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 8px;
+      display: none;
+      color: #065f46;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ TypeAware Icon Generator</h1>
+    
+    <div class="instructions">
+      <strong>⚠️ Important:</strong> Generate all required icon sizes for the extension.
+      <br><br>
+      <strong>Steps:</strong>
+      <ol>
+        <li>Click "Generate Icons" below</li>
+        <li>Click "Download" for each size</li>
+        <li>Save in <code>frontend/extension/icons/</code> with exact filenames</li>
+        <li>Rebuild extension with <code>npm run build</code></li>
+      </ol>
+    </div>
+
+    <button onclick="generateIcons()" style="font-size: 16px; padding: 12px 24px;">
+      🎨 Generate Icons
+    </button>
+
+    <div class="icon-preview" id="iconPreview"></div>
+
+    <div class="success" id="successMessage">
+      ✅ Icons generated! Download each size and save with the exact filename shown.
+    </div>
+  </div>
+
+  <script>
+    function generateIcons() {
+      const sizes = [16, 32, 48, 128];
+      const preview = document.getElementById('iconPreview');
+      preview.innerHTML = '';
+
+      sizes.forEach(size => {
+        // Create canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Create gradient background
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#8B5CF6');  // Purple
+        gradient.addColorStop(1, '#3B82F6');  // Blue
+        
+        // Draw background with gradient
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        // Draw rounded corners
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.beginPath();
+        const radius = size * 0.2;
+        ctx.moveTo(radius, 0);
+        ctx.lineTo(size - radius, 0);
+        ctx.quadraticCurveTo(size, 0, size, radius);
+        ctx.lineTo(size, size - radius);
+        ctx.quadraticCurveTo(size, size, size - radius, size);
+        ctx.lineTo(radius, size);
+        ctx.quadraticCurveTo(0, size, 0, size - radius);
+        ctx.lineTo(0, radius);
+        ctx.quadraticCurveTo(0, 0, radius, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Reset composite operation
+        ctx.globalCompositeOperation = 'source-over';
+
+        // Draw shield shape
+        ctx.fillStyle = 'white';
+        const centerX = size / 2;
+        const centerY = size / 2;
+        const shieldWidth = size * 0.6;
+        const shieldHeight = size * 0.7;
+
+        // Draw shield with subtle gradient
+        const shieldGradient = ctx.createLinearGradient(
+          centerX - shieldWidth/2, 
+          centerY - shieldHeight/2, 
+          centerX + shieldWidth/2, 
+          centerY + shieldHeight/2
+        );
+        shieldGradient.addColorStop(0, 'rgba(255,255,255,0.95)');
+        shieldGradient.addColorStop(1, 'rgba(255,255,255,0.85)');
+        ctx.fillStyle = shieldGradient;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY - shieldHeight/2);
+        ctx.lineTo(centerX + shieldWidth/2, centerY - shieldHeight/3);
+        ctx.lineTo(centerX + shieldWidth/2, centerY + shieldHeight/4);
+        ctx.quadraticCurveTo(
+          centerX + shieldWidth/2, 
+          centerY + shieldHeight/2, 
+          centerX, 
+          centerY + shieldHeight/2
+        );
+        ctx.quadraticCurveTo(
+          centerX - shieldWidth/2, 
+          centerY + shieldHeight/2, 
+          centerX - shieldWidth/2, 
+          centerY + shieldHeight/4
+        );
+        ctx.lineTo(centerX - shieldWidth/2, centerY - shieldHeight/3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Add subtle shadow
+        ctx.shadowColor = 'rgba(0,0,0,0.1)';
+        ctx.shadowBlur = size * 0.1;
+        ctx.shadowOffsetY = size * 0.02;
+
+        // Draw checkmark
+        ctx.strokeStyle = '#8B5CF6';
+        ctx.lineWidth = size * 0.08;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX - shieldWidth/4, centerY);
+        ctx.lineTo(centerX - shieldWidth/8, centerY + shieldHeight/6);
+        ctx.lineTo(centerX + shieldWidth/4, centerY - shieldHeight/6);
+        ctx.stroke();
+
+        // Create container
+        const container = document.createElement('div');
+        container.className = 'icon-item';
+        
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.style.width = Math.max(48, size) + 'px';
+        img.style.height = Math.max(48, size) + 'px';
+        
+        const label = document.createElement('div');
+        label.innerHTML = `<strong>icon${size}.png</strong><br>${size}x${size}`;
+        
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = 'Download';
+        downloadBtn.style.fontSize = '14px';
+        downloadBtn.style.padding = '8px 16px';
+        downloadBtn.onclick = () => downloadIcon(canvas, size);
+        
+        container.appendChild(img);
+        container.appendChild(label);
+        container.appendChild(downloadBtn);
+        preview.appendChild(container);
+      });
+
+      document.getElementById('successMessage').style.display = 'block';
+    }
+
+    function downloadIcon(canvas, size) {
+      const link = document.createElement('a');
+      link.download = `icon${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Generate icons on page load
+    window.onload = generateIcons;
+  </script>
+</body>
+</html>

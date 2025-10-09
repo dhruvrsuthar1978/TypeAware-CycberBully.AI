@@ -5,15 +5,13 @@ const extensionInstallationSchema = new mongoose.Schema({
   // Extension identification
   extensionId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
 
   // User identification (anonymous UUID from extension)
   userUuid: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
 
   // Version information

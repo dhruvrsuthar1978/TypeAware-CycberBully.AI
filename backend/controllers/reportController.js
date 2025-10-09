@@ -119,6 +119,21 @@ class ReportController {
     
     // NOTE: For stability, all other controller methods used by routes must also be arrow functions.
     
+    /**
+     * Retrieves general report statistics.
+     * 🛑 FIX: Uses arrow function.
+     */
+    getReportStats = async (req, res) => {
+        try {
+            const stats = await reportService.getReportStats();
+
+            res.json(createResponse('Report statistics retrieved successfully', { stats }));
+        } catch (error) {
+            console.error('Get report stats error:', error);
+            res.status(500).json(createErrorResponse('Fetch Failed', 'Unable to fetch report statistics'));
+        }
+    }
+
     // Placeholder arrow functions for all other assumed methods to prevent future crashes:
     submitBatchReports = async (req, res) => { /* ... implementation ... */ }
     getReportsByBrowserUUID = async (req, res) => { /* ... implementation ... */ }

@@ -6,8 +6,7 @@ class UserService {
   async getUserProfile(userId) {
     try {
       return await User.findById(userId)
-        .select('-password -refreshToken -passwordResetToken -passwordResetExpiry')
-        .lean();
+        .select('-password -refreshToken -passwordResetToken -passwordResetExpiry');
     } catch (error) {
       throw new Error(`Error fetching user profile: ${error.message}`);
     }

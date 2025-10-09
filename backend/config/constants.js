@@ -167,18 +167,18 @@ const ANALYTICS_PERIODS = {
 // Rate limiting configurations
 const RATE_LIMITS = {
   AUTH: {
-    LOGIN: { windowMs: 15 * 60 * 1000, max: 5 }, // 5 attempts per 15 minutes
-    REGISTER: { windowMs: 60 * 60 * 1000, max: 3 }, // 3 attempts per hour
-    RESET_PASSWORD: { windowMs: 60 * 60 * 1000, max: 3 }
+    LOGIN: { windowMs: 15 * 60 * 1000, max: 50 }, // 50 attempts per 15 minutes (relaxed for testing)
+    REGISTER: { windowMs: 60 * 60 * 1000, max: 20 }, // 20 attempts per hour (relaxed for testing)
+    RESET_PASSWORD: { windowMs: 60 * 60 * 1000, max: 20 }
   },
   API: {
-    GENERAL: { windowMs: 15 * 60 * 1000, max: 100 }, // 100 requests per 15 minutes
-    REPORTS: { windowMs: 15 * 60 * 1000, max: 50 }, // 50 reports per 15 minutes
-    ANALYTICS: { windowMs: 15 * 60 * 1000, max: 20 } // 20 analytics requests per 15 minutes
+    GENERAL: { windowMs: 15 * 60 * 1000, max: 1000 }, // 1000 requests per 15 minutes (relaxed for testing)
+    REPORTS: { windowMs: 15 * 60 * 1000, max: 200 }, // 200 reports per 15 minutes (relaxed for testing)
+    ANALYTICS: { windowMs: 15 * 60 * 1000, max: 200 } // 200 analytics requests per 15 minutes (relaxed for testing)
   },
   EXTENSION: {
-    REPORT_SUBMIT: { windowMs: 60 * 1000, max: 10 }, // 10 reports per minute
-    DATA_SYNC: { windowMs: 5 * 60 * 1000, max: 30 } // 30 sync requests per 5 minutes
+    REPORT_SUBMIT: { windowMs: 60 * 1000, max: 50 }, // 50 reports per minute (relaxed for testing)
+    DATA_SYNC: { windowMs: 5 * 60 * 1000, max: 100 } // 100 sync requests per 5 minutes (relaxed for testing)
   }
 };
 
@@ -241,7 +241,8 @@ const EXTENSION_CONFIG = {
   UPDATE_CHECK_INTERVAL: 24 * 60 * 60 * 1000, // 24 hours
   HEARTBEAT_INTERVAL: 5 * 60 * 1000, // 5 minutes
   MAX_OFFLINE_REPORTS: 100,
-  SYNC_BATCH_SIZE: 50
+  SYNC_BATCH_SIZE: 50,
+  SYNC_INTERVAL: 300000 // 5 minutes
 };
 
 // Detection settings

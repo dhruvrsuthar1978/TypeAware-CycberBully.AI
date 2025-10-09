@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: typeaware-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        fromSecret: mongodb_uri
+      - key: JWT_SECRET
+        fromSecret: jwt_secret
+      - key: EMAIL_USER
+        fromSecret: email_user
+      - key: EMAIL_PASS
+        fromSecret: email_pass
+      - key: FRONTEND_URL
+        fromSecret: frontend_url
+      - key: REDIS_URL
+        fromSecret: redis_url
+      - key: AI_SERVICE_URL
+        fromSecret: ai_service_url
+    healthCheckPath: /api/health
+    disk:
+      name: logs
+      mountPath: /opt/render/project/logs
+      sizeGB: 1

@@ -66,7 +66,8 @@ class ExtensionService {
         config: await this.getExtensionConfig(version)
       };
     } catch (error) {
-      console.error('Error recording heartbeat:', error);
+      console.error('Error recording heartbeat:', error.message);
+      console.error(error.stack);
       throw error;
     }
   }
@@ -439,29 +440,48 @@ class ExtensionService {
   // Register new installation
   async registerInstallation(installationData) {
     try {
-      const installation = new ExtensionInstallation({
-        ...installationData,
-        status: 'active',
-        heartbeatCount: 0
+      // Check if installation already exists
+      let installation = await ExtensionInstallation.findOne({
+        extensionId: installationData.extensionId,
+        userUuid: installationData.userUuid
       });
 
-      await installation.save();
+      if (installation) {
+        // Update existing installation
+        installation.version = installationData.version;
+        installation.browserInfo = installationData.browserInfo;
+        installation.installationSource = installationData.installationSource;
+        installation.ip = installationData.ip || '127.0.0.1';
+        installation.userAgent = installationData.userAgent;
+        installation.lastActiveAt = new Date();
+        installation.status = 'active';
+        await installation.save();
+      } else {
+        // Create new installation
+        installation = new ExtensionInstallation({
+          ...installationData,
+          ip: installationData.ip || '127.0.0.1', // Default IP if not provided
+          status: 'active',
+          heartbeatCount: 0
+        });
+        await installation.save();
+      }
 
       // Log installation activity
       await this.logActivity({
         extensionId: installationData.extensionId,
         userUuid: installationData.userUuid,
-        action: 'installation_registered',
+        action: installation.isNew ? 'installation_registered' : 'installation_updated',
         data: {
           version: installationData.version,
           source: installationData.installationSource
         },
-        ip: installationData.ip
+        ip: installationData.ip || '127.0.0.1'
       });
 
       return {
         installationId: installation._id,
-        status: 'registered',
+        status: installation.isNew ? 'registered' : 'updated',
         config: await this.getExtensionConfig(installationData.version)
       };
     } catch (error) {

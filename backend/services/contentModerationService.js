@@ -1,5 +1,6 @@
 // services/contentModerationService.js
 const { DETECTION_PATTERNS, FLAG_REASONS, SEVERITY_LEVELS } = require('../config/constants');
+const axios = require('axios');
 
 class ContentModerationService {
   constructor() {
@@ -8,6 +9,38 @@ class ContentModerationService {
     this.spamPatterns = this.loadSpamPatterns();
     this.threatPatterns = this.loadThreatPatterns();
     this.hatePatterns = this.loadHatePatterns();
+
+    // ML API endpoint config
+    this.mlApiUrl = process.env.ML_API_URL || 'http://localhost:8000/predict';
+  }
+
+  // Call external ML detection API
+  async detectWithML(content, context = {}) {
+    try {
+      const response = await axios.post(this.mlApiUrl, { text: content });
+      if (response.data && response.data.scores) {
+        const scores = response.data.scores;
+        const overallScore = response.data.overall_score || 0;
+        const confidence = response.data.confidence || 0;
+        const detectedPatterns = response.data.detected_patterns || [];
+
+        const detected = overallScore > 0.5 || detectedPatterns.length > 0;
+
+        return {
+          detected,
+          type: 'ml_detection',
+          confidence,
+          severity: overallScore > 0.7 ? SEVERITY_LEVELS.HIGH : SEVERITY_LEVELS.MEDIUM,
+          scores,
+          detectedPatterns,
+          reason: 'ML model detection results'
+        };
+      }
+      return { detected: false };
+    } catch (error) {
+      console.error('ML detection API error:', error.message);
+      return { detected: false };
+    }
   }
 
   // Main content analysis method
@@ -32,6 +65,10 @@ class ContentModerationService {
     const hateResult = this.detectHateSpeech(normalizedContent);
     const toxicityResult = this.detectToxicity(normalizedContent);
 
+    // Run ML-based detection
+    const mlResult = await this.detectWithML(content, context);
+    if (mlResult.detected) detectedViolations.push(mlResult);
+
     // Collect all violations
     if (harassmentResult.detected) detectedViolations.push(harassmentResult);
     if (profanityResult.detected) detectedViolations.push(profanityResult);
@@ -54,7 +91,8 @@ class ContentModerationService {
       metadata: {
         contentLength: content.length,
         wordCount: normalizedContent.split(/\s+/).length,
-        analysisTimestamp: new Date().toISOString()
+        analysisTimestamp: new Date().toISOString(),
+        mlDetectionUsed: true
       }
     };
   }
@@ -92,7 +130,7 @@ class ContentModerationService {
     }
 
     return {
-      detected: detectedViolations.length > 0,
+      detected: detectedPatterns.length > 0,
       type: FLAG_REASONS.HARASSMENT.code,
       confidence: maxConfidence,
       severity: this.getSeverityFromPatterns(detectedPatterns),
@@ -353,7 +391,8 @@ class ContentModerationService {
       [FLAG_REASONS.HARASSMENT.code]: 0.8,
       'profanity': 0.6,
       'toxicity': 0.5,
-      [FLAG_REASONS.SPAM.code]: 0.3
+      [FLAG_REASONS.SPAM.code]: 0.3,
+      'ml_detection': 0.9
     };
 
     let weightedSum = 0;
@@ -432,6 +471,14 @@ class ContentModerationService {
             type: 'tone',
             message: 'Consider adopting a more positive and constructive tone',
             severity: 'medium'
+          });
+          break;
+
+        case 'ml_detection':
+          suggestions.push({
+            type: 'review',
+            message: 'This content was flagged by our ML detection system. Please review and consider rephrasing',
+            severity: 'high'
           });
           break;
       }
@@ -549,13 +596,15 @@ class ContentModerationService {
   getServiceStats() {
     return {
       patternsLoaded: {
-        profanity: Object.keys(this.profanityPatterns).reduce((sum, key) => 
+        profanity: Object.keys(this.profanityPatterns).reduce((sum, key) =>
           sum + this.profanityPatterns[key].length, 0),
         harassment: this.harassmentPatterns.length,
         spam: this.spamPatterns.length,
         threats: this.threatPatterns.length,
         hate: this.hatePatterns.length
       },
+      mlDetectionEnabled: true,
+      mlApiUrl: this.mlApiUrl,
       version: '1.0.0',
       lastUpdated: new Date().toISOString()
     };

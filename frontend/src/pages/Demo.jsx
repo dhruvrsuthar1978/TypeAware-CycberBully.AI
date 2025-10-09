@@ -1,420 +1,308 @@
-import { useState } from 'react';
+import { useState, useEffect } from "react";
+import { Shield, Sparkles, AlertTriangle, Info, Zap, TrendingUp, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, Shield, AlertTriangle, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 
-const Demo = () => {
-  const [testText, setTestText] = useState('');
-  const [analysisResult, setAnalysisResult] = useState(null);
+function Demo() {
+  const [userText, setUserText] = useState("");
+  const [aiResult, setAiResult] = useState("");
+  const [rephraseResult, setRephraseResult] = useState("");
+  const [typingTimeout, setTypingTimeout] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(true);
-  const [rephrasingMode, setRephrasingMode] = useState(false);
-  const [rephrasingSuggestions, setRephrasingSuggestions] = useState([]);
-  const [selectedText, setSelectedText] = useState('');
-  const { toast } = useToast();
-  const { getAuthHeaders } = useAuth();
 
-  // Get rephrasing suggestions
-  const getRephrasingSuggestions = async (text) => {
+  // Function to call backend API for rephrasing
+  const getRephraseSuggestions = async (text) => {
     try {
-      const response = await fetch('http://localhost:8000/rephrase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
+      const response = await fetch("/api/ai/rephrase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to get rephrasing suggestions');
-      }
-
       const data = await response.json();
-      return data.rephrased_suggestions || [];
-    } catch (error) {
-      console.error('Rephrasing error:', error);
-      return [];
+
+      if (data.success && data.data && data.data.suggestions && data.data.suggestions.length > 0) {
+        const suggestion = data.data.suggestions[0].suggested_text;
+        setRephraseResult(suggestion);
+        return suggestion;
+      } else {
+        setRephraseResult("No rephrasing suggestion available");
+        return null;
+      }
+    } catch (err) {
+      console.error("Rephrase request failed:", err);
+      setRephraseResult("Error getting rephrasing suggestion");
+      return null;
     }
   };
 
-  // Perform final analysis
-  const performAnalysis = async (text) => {
-    try {
-      const response = await fetch('http://localhost:5000/api/ai/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({ content: text }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze text');
-      }
-
-      const data = await response.json();
-
-      // Transform AI response to match UI expectations
-      const threats = [];
-      if (data.flagged) {
-        data.reasons.forEach(reason => {
-          let severity = 'medium';
-          if (reason.includes('High toxicity')) severity = 'high';
-          if (reason.includes('Harassment') || reason.includes('critical')) severity = 'critical';
-
-          threats.push({
-            type: reason.toLowerCase().includes('toxicity') ? 'toxicity' : 'other',
-            severity,
-            word: reason,
-            context: reason
-          });
-        });
-      }
-
-      setAnalysisResult({
-        threats,
-        safetyScore: Math.round((1 - data.toxicity_score) * 100),
-        suggestions: data.flagged ? [
-          'Consider using more respectful language',
-          'Focus on constructive communication',
-          'Take a moment before posting'
-        ] : ['Your message looks great!']
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: "Unable to analyze text. Please try again."
-      });
-      console.error('AI analysis error:', error);
-    }
-  };
-
-  // Demo analysis function
+  // Function to call backend API for analysis
   const analyzeText = async (text) => {
     if (!text.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter some text to analyze"
-      });
+      setAiResult("");
+      setRephraseResult("");
       return;
     }
-
     setIsAnalyzing(true);
-    setAnalysisResult(null);
-    setRephrasingMode(false);
-    setRephrasingSuggestions([]);
-
     try {
-      // Always get rephrasing suggestions first for demo purposes
-      const suggestions = await getRephrasingSuggestions(text);
-      if (suggestions.length > 0) {
-        setRephrasingSuggestions(suggestions);
-        setRephrasingMode(true);
-        setIsAnalyzing(false);
-        return;
-      }
-
-      // If no rephrasing suggestions available, proceed directly to analysis
-      await performAnalysis(text);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: "Unable to analyze text. Please try again."
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text }),
       });
-      console.error('AI analysis error:', error);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        const analysis = data.data;
+        let result = `Category: ${analysis.category}\nSeverity: ${analysis.severity}\nToxicity Score: ${analysis.toxicity_score}\nExplanation: ${analysis.explanation}\nSuggestion: ${analysis.suggestion}`;
+
+        // Check if bullying is detected and suggest rephrase
+        const category = analysis.category?.toLowerCase() || "";
+        const severity = analysis.severity?.toLowerCase() || "";
+        if (category.includes("bullying") || category.includes("harassment") || severity === "high") {
+          const rephrase = await getRephraseSuggestions(text);
+          if (rephrase) {
+            result += `\n\nRephrased Suggestion: ${rephrase}`;
+          }
+        } else {
+          setRephraseResult("");
+        }
+
+        setAiResult(result);
+      } else {
+        setAiResult("Error: Invalid response format");
+        setRephraseResult("");
+      }
+    } catch (err) {
+      console.error("AI request failed:", err);
+      setAiResult("Error analyzing text");
+      setRephraseResult("");
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  // Handle rephrasing selection
-  const selectRephrasedText = async (rephrasedText) => {
-    setSelectedText(rephrasedText);
-    setRephrasingMode(false);
-    setIsAnalyzing(true);
+  // Debounce input to avoid flooding the backend
+  useEffect(() => {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    const timeout = setTimeout(() => {
+      analyzeText(userText);
+    }, 500); // 0.5s delay
+    setTypingTimeout(timeout);
 
-    try {
-      await performAnalysis(rephrasedText);
-    } catch (error) {
-      console.error('Analysis error:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+    return () => clearTimeout(timeout);
+  }, [userText]);
 
-  // Proceed with original text
-  const proceedWithOriginal = async () => {
-    setRephrasingMode(false);
-    setIsAnalyzing(true);
-
-    try {
-      await performAnalysis(testText);
-    } catch (error) {
-      console.error('Analysis error:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'critical': return 'bg-danger text-danger-foreground';
-      case 'high': return 'bg-warning text-warning-foreground';
-      case 'medium': return 'bg-accent text-accent-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
-    }
-  };
-
-  const getSafetyScoreColor = (score) => {
-    if (score >= 80) return 'text-security';
-    if (score >= 60) return 'text-warning';
-    return 'text-danger';
-  };
+  const features = [
+    { icon: Shield, text: 'Real-time threat detection', color: 'from-purple-500 to-pink-500' },
+    { icon: Zap, text: 'Instant AI analysis', color: 'from-blue-500 to-cyan-500' },
+    { icon: Sparkles, text: 'Smart rephrasing suggestions', color: 'from-green-500 to-emerald-500' },
+    { icon: CheckCircle, text: 'Privacy-first processing', color: 'from-orange-500 to-red-500' }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-accent/30 py-8 px-4">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header */}
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              TypeAware Demo Center
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Test our advanced AI-powered content moderation technology. Analyze text for toxicity, harassment, and safety threats.
-            </p>
+    <div className="min-h-screen bg-background">
+      {/* Hero Section - Aurora Gradient */}
+      <section className="relative py-20 px-4 bg-gradient-aurora overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-transparent"></div>
+        
+        {/* Animated Background Pattern */}
+        <div className="absolute inset-0 bg-pattern-dots opacity-20"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute top-10 left-10 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+        
+        <div className="relative max-w-4xl mx-auto text-center">
+          <div className="flex justify-center mb-8">
+            <div className="relative group">
+              <Shield className="h-16 w-16 text-white relative z-10 group-hover:scale-110 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-white/40 rounded-full blur-2xl animate-pulse-glow"></div>
+            </div>
           </div>
-          {/* Removed Demo Credentials section as per user request */}
+          
+          <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-6 animate-fade-in leading-tight">
+            TypeAware Demo Center
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-white/95 max-w-3xl mx-auto mb-8 animate-fade-in leading-relaxed font-light">
+            Test our advanced AI-powered content moderation technology. Analyze text for toxicity, harassment, and safety threats in real-time.
+          </p>
+        </div>
+      </section>
 
+      {/* Features Bar */}
+      <section className="py-8 px-4 -mt-8 relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {features.map((feature, index) => (
+              <Card key={index} className="glass-card-strong border-white/30 hover-lift text-center">
+                <CardContent className="p-4">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+                    <feature.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground pt-3">{feature.text}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
+      {/* Demo Section */}
+      <section className="py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Left Column: Input */}
+            <Card className="hover-lift-strong border-0 bg-gradient-card shadow-elegant overflow-hidden relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <CardHeader className="relative z-10">
+                <CardTitle className="flex items-center gap-3 text-2xl font-display">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-lg">
+                    <Sparkles className="h-6 w-6 text-white" />
+                  </div>
+                  Text Input & Analysis
+                </CardTitle>
+                <CardDescription className="text-base">
+                  Type or paste text to analyze and get AI-powered insights
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 relative z-10">
+                <div className="relative">
+                  <textarea
+                    placeholder="Type or paste text here to analyze for toxicity, harassment, or harmful content..."
+                    value={userText}
+                    onChange={(e) => setUserText(e.target.value)}
+                    rows={14}
+                    className="w-full p-4 border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base resize-none bg-background/50 backdrop-blur-sm transition-all duration-300"
+                  />
+                  {userText && (
+                    <div className="absolute bottom-4 right-4 text-xs font-medium text-muted-foreground bg-muted/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-border/50">
+                      {userText.length} characters
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Text Testing Area */}
-          <Card className="hover-lift">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="w-5 h-5 text-primary" />
-                Text Analysis Demo
-              </CardTitle>
-              <CardDescription>
-                Enter any text to see how our AI detection system works
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Type your message here... (try words like 'hate', 'stupid', or 'YOU SUCK' to see detection in action)"
-                value={testText}
-                onChange={async (e) => {
-                  const newText = e.target.value;
-                  setTestText(newText);
-                  // Automatically analyze text on input change
-                  if (newText.trim()) {
-                    await analyzeText(newText);
-                  } else {
-                    setAnalysisResult(null);
-                    setRephrasingMode(false);
-                    setRephrasingSuggestions([]);
-                  }
-                }}
-                rows={6}
-                className="transition-smooth focus:ring-2 focus:ring-primary/20"
-              />
-              
-              <div className="flex gap-3">
-                {/* Removed Analyze Text button as analysis is automatic */}
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAnalysis(!showAnalysis)}
-                  size="lg"
-                >
-                  {showAnalysis ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </Button>
+            {/* Right Column: Results */}
+            <Card className="hover-lift-strong border-0 bg-gradient-card shadow-elegant overflow-hidden relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-security/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <CardHeader className="relative z-10">
+                <CardTitle className="flex items-center gap-3 text-2xl font-display">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-security flex items-center justify-center shadow-lg">
+                    <Shield className="h-6 w-6 text-white" />
+                  </div>
+                  Analysis Results
+                </CardTitle>
+                <CardDescription className="text-base">
+                  Real-time AI analysis of content safety and toxicity levels
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                {isAnalyzing ? (
+                  <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                    <div className="relative">
+                      <Shield className="h-16 w-16 text-primary animate-pulse" />
+                      <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl animate-pulse"></div>
+                    </div>
+                    <p className="text-muted-foreground font-semibold">Analyzing content...</p>
+                  </div>
+                ) : aiResult ? (
+                  <Card className="border-2 border-primary/30 bg-primary/5 animate-fade-in hover-lift">
+                    <CardContent className="p-6">
+                      <pre className="whitespace-pre-wrap text-foreground text-sm leading-relaxed">
+                        {aiResult}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center">
+                      <Info className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-foreground font-semibold mb-2">
+                        No analysis yet
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Start typing to see real-time analysis results
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Info Section */}
+      <section className="py-12 px-4 bg-muted/30 relative overflow-hidden">
+        <div className="absolute inset-0 bg-pattern-grid opacity-10"></div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <Card className="hover-lift border-0 bg-gradient-card shadow-elegant overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <CardContent className="p-8 relative z-10">
+              <div className="flex items-start gap-6">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Info className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-2xl mb-3 text-foreground">
+                    How It Works
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed text-lg">
+                    Our AI analyzes text in real-time using advanced machine learning models trained on millions of data points. 
+                    The system detects toxicity, harassment, hate speech, and other harmful content while providing constructive 
+                    suggestions for rephrasing problematic text. All processing happens instantly with sub-second response times.
+                  </p>
+                </div>
               </div>
-
-              {testText && (
-                <div className="text-sm text-muted-foreground">
-                  Character count: {testText.length}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Analysis Results */}
-          <Card className={`hover-lift transition-all duration-500 ${analysisResult && showAnalysis ? 'ring-2 ring-primary/20' : ''}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Analysis Results
-              </CardTitle>
-              <CardDescription>
-                Real-time safety assessment and threat detection
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Rephrasing Mode */}
-              {rephrasingMode && (
-                <div className="space-y-6 animate-fade-in">
-                  <div className="text-center">
-                    <AlertTriangle className="w-12 h-12 text-warning mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                      Potential Issues Detected
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      Your message may contain harmful content. Here are some kinder alternatives:
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-foreground">Rephrasing Suggestions:</h4>
-                    {rephrasingSuggestions.map((suggestion, index) => (
-                      <Card key={index} className="hover-scale cursor-pointer border-2 hover:border-primary/50" onClick={() => selectRephrasedText(suggestion)}>
-                        <CardContent className="p-4">
-                          <p className="text-foreground">{suggestion}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={proceedWithOriginal}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Proceed with Original Text
-                    </Button>
-                    <Button
-                      onClick={() => setRephrasingMode(false)}
-                      variant="secondary"
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {!analysisResult && !rephrasingMode && showAnalysis && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Enter text and click "Analyze Text" to see results</p>
-                </div>
-              )}
-
-              {analysisResult && !rephrasingMode && showAnalysis && (
-                <div className="space-y-6 animate-fade-in">
-                  {/* Safety Score */}
-                  <div className="text-center p-4 bg-gradient-card rounded-lg">
-                    <div className={`text-3xl font-bold ${getSafetyScoreColor(analysisResult.safetyScore)}`}>
-                      {analysisResult.safetyScore}%
-                    </div>
-                    <div className="text-sm text-muted-foreground">Safety Score</div>
-                    <div className="w-full bg-muted rounded-full h-2 mt-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-1000 ${
-                          analysisResult.safetyScore >= 80 ? 'bg-security' :
-                          analysisResult.safetyScore >= 60 ? 'bg-warning' : 'bg-danger'
-                        }`}
-                        style={{ width: `${analysisResult.safetyScore}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Threats Detected */}
-                  {analysisResult.threats.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-foreground flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-warning" />
-                        Threats Detected ({analysisResult.threats.length})
-                      </h4>
-                      {analysisResult.threats.map((threat, index) => (
-                  <Alert key={index} className="border-l-4 border-l-warning bg-warning/5 hover-scale">
-                    <AlertTriangle className="w-4 h-4 text-warning" />
-                    <AlertDescription>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-semibold text-foreground">{threat.word}</span>
-                          <p className="text-xs text-muted-foreground mt-1">{threat.context}</p>
-                        </div>
-                        <Badge className={getSeverityColor(threat.severity)}>
-                          {threat.severity}
-                        </Badge>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Suggestions */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-foreground flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-security" />
-                      Suggestions
-                    </h4>
-                    <ul className="space-y-1">
-                      {analysisResult.suggestions.map((suggestion, index) => (
-                        <li key={index} className="text-sm text-muted-foreground flex items-center gap-2">
-                          <div className="w-1 h-1 bg-primary rounded-full" />
-                          {suggestion}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {analysisResult.threats.length === 0 && (
-                  <Alert className="border-l-4 border-l-security bg-security/5 hover-scale">
-                    <CheckCircle className="w-4 h-4 text-security" />
-                    <AlertDescription className="text-foreground font-medium">
-                      Great! No safety threats detected in your message. It's safe to post.
-                    </AlertDescription>
-                  </Alert>
-                  )}
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
+      </section>
 
-        {/* Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="hover-lift text-center">
-            <CardContent className="pt-6">
-              <Shield className="w-12 h-12 text-primary mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">Real-time Detection</h3>
-              <p className="text-sm text-muted-foreground">Instant analysis as you type</p>
-            </CardContent>
-          </Card>
+      {/* CTA Section */}
+      <section className="py-20 px-4 bg-gradient-aurora relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-transparent"></div>
+        
+        {/* Animated Background Pattern */}
+        <div className="absolute inset-0 bg-pattern-dots opacity-20"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute top-10 right-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-10 left-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }}></div>
+        
+        <div className="relative max-w-4xl mx-auto text-center">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <TrendingUp className="h-16 w-16 text-white relative z-10" />
+              <div className="absolute inset-0 bg-white/40 rounded-full blur-xl animate-pulse-glow"></div>
+            </div>
+          </div>
           
-          <Card className="hover-lift text-center">
-            <CardContent className="pt-6">
-              <AlertTriangle className="w-12 h-12 text-warning mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">Multi-threat Analysis</h3>
-              <p className="text-sm text-muted-foreground">Detects toxicity, harassment & more</p>
-            </CardContent>
-          </Card>
+          <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6 animate-fade-in">
+            Ready to Get Started?
+          </h2>
+          <p className="text-xl md:text-2xl text-white/95 mb-12 max-w-2xl mx-auto leading-relaxed font-light">
+            Join thousands of users protecting their online communities with TypeAware
+          </p>
           
-          <Card className="hover-lift text-center">
-            <CardContent className="pt-6">
-              <CheckCircle className="w-12 h-12 text-security mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">Smart Suggestions</h3>
-              <p className="text-sm text-muted-foreground">AI-powered improvement tips</p>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button className="bg-white text-primary hover:bg-white/90 shadow-2xl hover-scale text-lg px-8 py-6 rounded-xl font-bold">
+              <Shield className="w-5 h-5 mr-2" />
+              Get Started Free
+            </Button>
+            <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 backdrop-blur-xl shadow-lg hover-scale text-lg px-8 py-6 rounded-xl font-bold">
+              Learn More
+            </Button>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
-};
+}
 
 export default Demo;

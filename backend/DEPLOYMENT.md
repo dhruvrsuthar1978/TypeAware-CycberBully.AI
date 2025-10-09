@@ -7,7 +7,7 @@ This guide covers deploying your TypeAware backend to various cloud platforms fo
 Before deploying, ensure you have:
 
 - [ ] Tested all API endpoints locally
-- [ ] Set up environment variables
+- [ ] Set up environment variables (including SMTP credentials)
 - [ ] Created admin user
 - [ ] Verified database connection
 - [ ] Run the API test suite
@@ -219,6 +219,13 @@ JWT_REFRESH_SECRET=another-super-long-random-secret-key
 
 # CORS
 FRONTEND_URL=https://your-frontend-domain.com
+
+# Email Service (Required for email functionality)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
 
 # Security
 BCRYPT_ROUNDS=12

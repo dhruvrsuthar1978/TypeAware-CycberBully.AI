@@ -16,6 +16,8 @@ router.use(rateLimitingService.generalApiLimiter());
 // POST /api/reports (Report Submission)
 router.post('/', reportController.submitReport);
 
+// GET /api/reports/stats (Public stats)
+router.get('/stats', reportController.getReportStats);
 
 // ------------------------------------
 // AUTHENTICATED ROUTES
@@ -23,6 +25,9 @@ router.post('/', reportController.submitReport);
 
 // Apply authentication middleware to all routes below this line
 router.use(protect); // 🛑 CRITICAL: Uses the correct function name
+
+// GET /api/reports (User's reports)
+router.get('/', reportController.getUserReports);
 
 // GET /api/reports/my-reports
 router.get('/my-reports', reportController.getUserReports);

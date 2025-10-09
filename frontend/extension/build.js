@@ -1,7 +1,12 @@
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 console.log('🚀 Building TypeAware Extension...');
 
@@ -16,22 +21,33 @@ try {
   
   // Copy additional files to dist
   console.log('📋 Copying additional files...');
-  
+
   const filesToCopy = [
     'content.css',
     'manifest.json',
     'README.md'
   ];
-  
+
   filesToCopy.forEach(file => {
     const sourcePath = path.join(__dirname, file);
     const destPath = path.join(distPath, file);
-    
+
     if (fs.existsSync(sourcePath)) {
       fs.copyFileSync(sourcePath, destPath);
       console.log(`✅ Copied ${file}`);
     }
   });
+
+  // Update popup.html script reference for production
+  const popupHtmlPath = path.join(distPath, 'popup.html');
+  if (fs.existsSync(popupHtmlPath)) {
+    let popupHtmlContent = fs.readFileSync(popupHtmlPath, 'utf8');
+    // Fix script paths for Chrome extension context (use relative paths)
+    popupHtmlContent = popupHtmlContent.replace('/src/popup.jsx', './popup.js');
+    popupHtmlContent = popupHtmlContent.replace('src="/popup.js"', 'src="./popup.js"');
+    fs.writeFileSync(popupHtmlPath, popupHtmlContent);
+    console.log('✅ Updated popup.html script reference');
+  }
   
   // Copy icons folder
   const iconsSourcePath = path.join(__dirname, 'icons');
@@ -43,13 +59,30 @@ try {
     }
     
     const iconFiles = fs.readdirSync(iconsSourcePath);
+    const requiredIcons = ['icon16.png', 'icon32.png', 'icon48.png', 'icon128.png'];
+    const existingIcons = iconFiles.filter(f => f.endsWith('.png'));
+    
+    // Copy existing icons
     iconFiles.forEach(file => {
       fs.copyFileSync(
         path.join(iconsSourcePath, file),
         path.join(iconsDestPath, file)
       );
     });
-    console.log('✅ Copied icons folder');
+    
+    // Check for missing icons
+    const missingIcons = requiredIcons.filter(icon => !existingIcons.includes(icon));
+    
+    if (missingIcons.length > 0) {
+      console.log('⚠️  WARNING: Missing icon files:', missingIcons.join(', '));
+      console.log('   Extension may not load in Chrome without all 4 icons!');
+      console.log('   Quick fix: Run copy-icons.bat (Windows) or ./copy-icons.sh (Mac/Linux)');
+      console.log('   Or use create-icons.html to generate proper icons');
+    } else {
+      console.log('✅ Copied icons folder (all 4 icons present)');
+    }
+  } else {
+    console.log('⚠️  WARNING: icons folder not found!');
   }
   
   // Create zip file (optional - for distribution)

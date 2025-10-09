@@ -158,6 +158,42 @@ class LoggingService {
     };
   }
 
+  // Direct error logging method
+  logError(message, details = {}) {
+    const errorLog = {
+      timestamp: new Date().toISOString(),
+      level: 'ERROR',
+      message,
+      details
+    };
+
+    try {
+      this.errorLogStream.write(JSON.stringify(errorLog) + '\n');
+    } catch (logError) {
+      console.error('Failed to write to error log:', logError.message);
+    }
+
+    console.error('🚨 Error:', message, details);
+  }
+
+  // Direct info logging method
+  logInfo(message, details = {}) {
+    const infoLog = {
+      timestamp: new Date().toISOString(),
+      level: 'INFO',
+      message,
+      details
+    };
+
+    try {
+      this.accessLogStream.write(JSON.stringify(infoLog) + '\n');
+    } catch (logError) {
+      console.error('Failed to write to info log:', logError.message);
+    }
+
+    console.log('ℹ️ Info:', message);
+  }
+
   // Initialize all logging components
   initialize() {
     console.log('📝 Initializing logging system...');

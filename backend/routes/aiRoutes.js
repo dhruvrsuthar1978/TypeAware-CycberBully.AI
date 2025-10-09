@@ -1,48 +1,31 @@
 // backend/routes/aiRoutes.js
 
 const express = require('express');
-const axios = require('axios');
 const router = express.Router();
+const AIController = require('../controllers/aiController');
+const aiController = AIController;
 
-// Import the AI controller
-const aiController = require('../controllers/aiController');
 
-// Enhanced AI routes using the new controller
+// -------------------------
+// AI Analysis Routes
+// -------------------------
 
-// @route POST /api/ai/analyze (Maps to getPrediction)
-router.post('/analyze', aiController.getPrediction);
+// POST /api/ai/analyze - Analyze content using Ollama
+router.post('/analyze', aiController.analyzeContent);
 
-// @route POST /api/ai/rephrase (Maps to getRephrasingSuggestions)
+// POST /api/ai/predict - Legacy predict endpoint (redirects to analyze)
+router.post('/predict', aiController.getPrediction);
+
+// POST /api/ai/rephrase - Get rephrasing suggestions
 router.post('/rephrase', aiController.getRephrasingSuggestions);
 
-// @route POST /api/ai/education (Maps to getEducationalContent)
+// POST /api/ai/education - Get educational content
 router.post('/education', aiController.getEducationalContent);
 
-// @route POST /api/ai/suggestions (Maps to getContextualSuggestions)
+// POST /api/ai/suggestions - Get contextual suggestions
 router.post('/suggestions', aiController.getContextualSuggestions);
 
-// @route GET /api/ai/health (Maps to getServiceHealth)
+// GET /api/ai/health - AI service health check
 router.get('/health', aiController.getServiceHealth);
-
-// Legacy route - kept for backward compatibility
-router.post("/predict", async (req, res) => {
-  try {
-    const input = req.body;
-
-    // Forward Authorization header from frontend request to AI service
-    const headers = {};
-    if (req.headers.authorization) {
-      headers.Authorization = req.headers.authorization;
-    }
-
-    // Call AI server
-    const aiResponse = await axios.post("http://localhost:8000/predict", input, { headers });
-
-    res.json(aiResponse.data); // send AI response back to frontend
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "AI service failed" });
-  }
-});
 
 module.exports = router;

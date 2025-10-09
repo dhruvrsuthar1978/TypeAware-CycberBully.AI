@@ -1,5 +1,6 @@
 // middleware/authMiddleware.js
 const jwtConfig = require('../config/jwt'); // your singleton JWTConfig instance
+const User = require('../models/User');
 
 // This middleware verifies JWTs using the jwtConfig helper
 async function protect(req, res, next) {
@@ -29,9 +30,32 @@ async function protect(req, res, next) {
       });
     }
 
-    // Attach decoded payload to req.user for downstream handlers
-    req.user = verification.decoded;
-    console.log('Middleware Success: Token verified for user:', verification.decoded.userId || verification.decoded.id);
+    const decoded = verification.decoded || {};
+
+    // Attach decoded payload and normalized identifiers
+    req.user = decoded;
+    req.userId = decoded.userId || decoded.id || decoded._id;
+
+    // Hydrate user role/email if not present in token
+    if (!req.user?.role || !req.user?.email) {
+      try {
+        if (req.userId) {
+          const dbUser = await User.findById(req.userId).select('role email username');
+          if (dbUser) {
+            req.user = {
+              ...decoded,
+              role: dbUser.role,
+              email: dbUser.email,
+              username: dbUser.username,
+            };
+          }
+        }
+      } catch (hydrateErr) {
+        console.warn('Auth hydrate warning:', hydrateErr.message);
+      }
+    }
+
+    console.log('Middleware Success: Token verified for user:', req.userId);
     return next();
   } catch (err) {
     console.error('--- CUSTOM PROTECT MIDDLEWARE FAILED ---', err);
