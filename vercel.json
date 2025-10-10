@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm run build",
+  "devCommand": "cd frontend && npm run dev",
+  "installCommand": "cd frontend && npm install",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/$1"
+    },
+    {
+      "src": "/(.*\\.[a-z0-9]+$)",
+      "dest": "/frontend/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/index.html"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "VITE_API_URL": "@vite_api_url"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production",
+      "VITE_API_URL": "@vite_api_url"
+    }
+  }
+}
