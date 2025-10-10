@@ -1,7 +1,8 @@
 // routes/analyticsRoutes.js
 const express = require('express');
 const router = express.Router();
-const analyticsController = require('../controllers/analyticsController');
+const AnalyticsController = require('../controllers/analyticsController-enhanced');
+const analyticsController = new AnalyticsController();
 const protect = require('../middleware/authMiddleware');
 
 // Each route explicitly calls the controller method
