@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend ;  npm run build",
-  "devCommand": "cd frontend ; npm run dev",
-  "installCommand": "cd frontend ; npm install",
-  "outputDirectory": "frontend/dist",
+  "buildCommand": "npm run build --prefix frontend",
+  "devCommand": "npm run dev --prefix frontend",
+  "installCommand": "npm install --prefix frontend",
+  "outputDirectory": "dist",
   "framework": "vite",
   "routes": [
     {
@@ -12,15 +12,15 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/dist/$1"
+      "dest": "/dist/$1"
     },
     {
       "src": "/(.*\\.[a-z0-9]+$)",
-      "dest": "/frontend/dist/$1"
+      "dest": "/dist/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
+      "dest": "/dist/index.html"
     }
   ],
   "env": {
