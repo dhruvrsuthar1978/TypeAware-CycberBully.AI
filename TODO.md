@@ -1,13 +1,8 @@
-# Project Cleanup and Deployment Preparation TODO
+# TODO: Move Extension Outside Frontend
 
-## Completed
-- Removed unnecessary test and duplicate files from backend
-- Created backend/render.yaml for Render deployment configuration
-- Created frontend/vercel.json for Vercel deployment configuration
-
-## Pending
-- Verify environment variables and secrets setup in Render and Vercel dashboards
-- Deploy backend to Render and verify health and API functionality
-- Deploy frontend to Vercel and verify UI and API integration
-- Update project documentation with deployment instructions and environment variable details
-- Perform end-to-end testing on deployed environments
+## Tasks
+- [x] Move `frontend/extension/` directory to root level as `extension/`
+- [x] Update `extension/create-icons.html` to change path from `frontend/extension/icons/` to `icons/` (relative)
+- [x] Test extension build process from new location
+- [x] Verify download functionality in frontend
+- [x] Update documentation if needed
