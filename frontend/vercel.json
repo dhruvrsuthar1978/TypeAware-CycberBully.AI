@@ -1,11 +1,30 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/(.*)", "dest": "/index.html" }
-  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "env": {
     "VITE_API_BASE_URL": "https://typeaware-backend.onrender.com",
     "VITE_AUTH_DOMAIN": "",
     "VITE_AUTH_CLIENT_ID": ""
-  }
+  },
+  "routes": [
+    {
+      "src": "/assets/.*",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/$1"
+    },
+    {
+      "src": "/index.html",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      },
+      "dest": "/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 }

@@ -56,24 +56,6 @@ const About = () => {
     { number: '5+', label: 'Supported Platforms', icon: Globe }
   ];
 
-  const team = [
-    {
-      name: 'Security Team',
-      role: 'AI & Machine Learning',
-      description: 'Expert researchers in natural language processing and threat detection algorithms.'
-    },
-    {
-      name: 'Privacy Team',
-      role: 'Data Protection',
-      description: 'Specialists ensuring all processing remains private and secure on user devices.'
-    },
-    {
-      name: 'Platform Team',
-      role: 'Integration & Support',
-      description: 'Engineers building seamless integrations across social media platforms.'
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section - Aurora Gradient with Animations */}
@@ -208,40 +190,6 @@ const About = () => {
                       )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Team Section - Modern Cards */}
-      <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">
-              <Users className="h-4 w-4" />
-              <span className="text-sm font-semibold">Meet The Team</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
-              Our Expert Teams
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Dedicated professionals working to make the internet a safer place for everyone
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {team.map((member, index) => (
-              <Card key={index} className="hover-lift-strong border-0 bg-gradient-card text-center overflow-hidden relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <CardContent className="p-8 relative z-10">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-primary text-white flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                    <Users className="h-10 w-10" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">{member.name}</h3>
-                  <p className="text-primary font-semibold mb-4">{member.role}</p>
-                  <p className="text-muted-foreground leading-relaxed">{member.description}</p>
                 </CardContent>
               </Card>
             ))}
