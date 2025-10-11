@@ -55,7 +55,8 @@ const corsOptions = {
       'http://localhost:8081',
       'https://typeaware.com',
       'https://www.typeaware.com',
-      'https://app.typeaware.com'
+      'https://app.typeaware.com',
+      'https://type-aware-cycber-bully-ai-git-main-dhruvs-projects-1256a535.vercel.app'
     ];
 
     if (origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://')) {
@@ -63,6 +64,8 @@ const corsOptions = {
     }
 
     if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else if (origin && origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(null, false);
