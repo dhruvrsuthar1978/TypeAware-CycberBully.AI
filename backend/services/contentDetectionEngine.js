@@ -45,6 +45,20 @@ class ContentDetectionEngine {
     this.detectionCache = new Map();
     this.maxCacheSize = 1000;
 
+    // Whitelist of common benign words/phrases that should never be flagged
+    this.benignWhitelist = new Set([
+      'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
+      'goodbye', 'bye', 'thanks', 'thank you', 'please', 'sorry', 'excuse me',
+      'yes', 'no', 'okay', 'ok', 'sure', 'maybe', 'perhaps', 'well', 'oh',
+      'wow', 'cool', 'nice', 'great', 'awesome', 'amazing', 'fantastic',
+      'wonderful', 'excellent', 'perfect', 'good', 'fine', 'alright',
+      'how are you', 'what\'s up', 'how\'s it going', 'nice to meet you',
+      'pleasure to meet you', 'have a good day', 'take care', 'see you later',
+      'good night', 'sweet dreams', 'congratulations', 'happy birthday',
+      'merry christmas', 'happy new year', 'happy holidays', 'best wishes',
+      'good luck', 'all the best', 'cheers', 'bless you', 'welcome'
+    ]);
+
     this.stats = {
       total_scanned: 0,
       threats_detected: 0,
@@ -435,6 +449,13 @@ class ContentDetectionEngine {
 
     // Input validation
     if (!text || typeof text !== 'string') {
+      return this._createEmptyResult(Date.now() - startTime);
+    }
+
+    // Check if text contains only benign words/phrases
+    const lowerText = text.toLowerCase().trim();
+    if (this.benignWhitelist.has(lowerText) ||
+        lowerText.split(/\s+/).every(word => this.benignWhitelist.has(word))) {
       return this._createEmptyResult(Date.now() - startTime);
     }
 
