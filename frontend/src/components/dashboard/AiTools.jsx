@@ -18,28 +18,41 @@ const AiTools = () => {
 
     setTesting(true);
     try {
-      // Simulate API call with mock data
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call real AI analysis API
+      const analyzeResponse = await fetch('http://localhost:5000/api/ai/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: testText }),
+      });
 
-      const mockResponse = {
-        detected: true,
-        confidence: 0.87,
-        categories: ['Harassment', 'Bullying'],
-        severity: 'High',
-        timestamp: new Date().toISOString()
-      };
+      if (!analyzeResponse.ok) {
+        throw new Error(`Analysis failed: ${analyzeResponse.status}`);
+      }
 
-      const mockSuggestions = [
-        'Consider using kinder language when addressing others.',
-        'Try to express your feelings without attacking the person.',
-        'Focus on the behavior rather than personal attacks.'
-      ];
+      const analyzeData = await analyzeResponse.json();
 
-      setAiResults(mockResponse);
-      setRephraseSuggestions(mockSuggestions);
+      // Call rephrase suggestions API
+      const rephraseResponse = await fetch('http://localhost:5000/api/ai/rephrase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: testText }),
+      });
+
+      let rephraseData = [];
+      if (rephraseResponse.ok) {
+        const rephraseResult = await rephraseResponse.json();
+        rephraseData = rephraseResult.suggestions || rephraseResult.data?.suggestions || [];
+      }
+
+      setAiResults(analyzeData);
+      setRephraseSuggestions(rephraseData);
     } catch (error) {
       console.error('AI test failed:', error);
-      alert('Failed to test AI. Please try again.');
+      alert(`Failed to test AI: ${error.message}. Ensure the backend server is running on port 5000.`);
     } finally {
       setTesting(false);
     }
@@ -64,9 +77,9 @@ const AiTools = () => {
             className="bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary transition-colors resize-none"
           />
         </div>
-        <Button 
-          onClick={testAI} 
-          disabled={testing} 
+        <Button
+          onClick={testAI}
+          disabled={testing}
           className="w-full md:w-auto bg-gradient-primary hover:opacity-90 transition-opacity shadow-lg hover-scale"
           size="lg"
         >
@@ -82,7 +95,7 @@ const AiTools = () => {
             </>
           )}
         </Button>
-        
+
         {aiResults && (
           <div className="p-6 bg-muted/30 backdrop-blur-sm rounded-xl border border-border/50 animate-fade-in">
             <div className="flex items-center gap-2 mb-4">
@@ -94,7 +107,7 @@ const AiTools = () => {
             </pre>
           </div>
         )}
-        
+
         {rephraseSuggestions.length > 0 && (
           <div className="p-6 bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-sm rounded-xl border border-primary/20 animate-fade-in">
             <div className="flex items-center gap-2 mb-4">
