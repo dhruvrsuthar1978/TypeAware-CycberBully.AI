@@ -218,7 +218,7 @@ const UserDashboard = () => {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground mb-4">Browser extension is protecting you in real-time</p>
-              <Button variant="outline" size="sm" className="w-full hover-scale" onClick={() => window.open('chrome://extensions/', '_blank')}>
+              <Button variant="outline" size="sm" className="w-full hover-scale" onClick={() => navigate('/extension')}>
                 <Settings className="h-4 w-4 mr-2" />
                 Configure Extension
               </Button>
@@ -278,7 +278,10 @@ const UserDashboard = () => {
                 <Lightbulb className="h-5 w-5 text-warning" />
               </div>
               <p className="text-sm text-muted-foreground mb-4 min-h-[3rem]">{safetyTips[selectedTipIndex]}</p>
-              <Button variant="outline" size="sm" className="w-full hover-scale">
+              <Button variant="outline" size="sm" className="w-full hover-scale" onClick={() => {
+                console.log('Learn More button clicked, navigating to /learn-more');
+                navigate('/learn-more');
+              }}>
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Learn More
               </Button>
@@ -557,22 +560,6 @@ const UserDashboard = () => {
         </Card>
       </div>
 
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: hsl(var(--muted));
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: hsl(var(--primary));
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: hsl(var(--primary-dark));
-        }
-      `}</style>
     </div>
   );
 };
