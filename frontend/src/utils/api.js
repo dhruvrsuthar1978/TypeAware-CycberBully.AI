@@ -3,7 +3,7 @@ import { ErrorCodes } from './errorCodes';
 
 // Create axios instance with default config
 export const api = axios.create({
-  baseURL: process.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.VITE_API_URL || 'http://localhost:5000/api' || 'https://type-aware-cycber-bully-ai.vercel.app/api',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
