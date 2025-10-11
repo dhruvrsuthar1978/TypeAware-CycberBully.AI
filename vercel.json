@@ -4,7 +4,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "env": {
-    "VITE_API_BASE_URL": "https://typeaware-backend.onrender.com",
+    "VITE_API_BASE_URL": "https://typeaware-cycberbully-ai.onrender.com",
     "VITE_AUTH_DOMAIN": "",
     "VITE_AUTH_CLIENT_ID": "",
     "NODE_ENV": "production"
