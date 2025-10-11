@@ -169,7 +169,8 @@ class ContentDetectionEngine {
         words: [
           'fuck', 'shit', 'damn', 'bitch', 'asshole', 'bastard', 'cunt', 'dick',
           'pussy', 'cock', 'fucker', 'motherfucker', 'bullshit', 'crap', 'hell',
-          'piss', 'suck', 'tits', 'boobs', 'ass'
+          'piss', 'suck', 'tits', 'boobs', 'ass', 'nigga', 'nigger', 'faggot',
+          'retard', 'spastic', 'chink', 'gook', 'wetback', 'beaner', 'kike'
         ],
         patterns: [
           /f[u\*@#\$%\^&\(\)]ck/gi,
@@ -190,7 +191,239 @@ class ContentDetectionEngine {
           /s[u\*@#\$%\^&\(\)]ck/gi,
           /t[i\*@#\$%\^&\(\)]ts/gi,
           /b[o\*@#\$%\^&\(\)]obs/gi,
-          /a[s\*@#\$%\^&\(\)]s/gi
+          /a[s\*@#\$%\^&\(\)]s/gi,
+          /n[i\*@#\$%\^&\(\)]gg[e\*@#\$%\^&\(\)]r/gi,
+          /f[a\*@#\$%\^&\(\)]gg[o\*@#\$%\^&\(\)]t/gi,
+          /r[e\*@#\$%\^&\(\)]t[a\*@#\$%\^&\(\)]rd/gi
+        ],
+        severity: this.severityLevels.MEDIUM
+      },
+
+      doxxing: {
+        words: [
+          'address', 'phone', 'email', 'location', 'home', 'workplace',
+          'school', 'personal', 'private', 'expose', 'reveal', 'leak'
+        ],
+        patterns: [
+          /lives\s+(at|in)\s+\d+/gi,
+          /phone\s+(number|is)\s*\d+/gi,
+          /email\s+(is|address)\s*\w+@\w+\.\w+/gi,
+          /works\s+(at|for)\s+\w+/gi,
+          /school\s+(is|at)\s+\w+/gi,
+          /i\s+know\s+where\s+you\s+(live|work)/gi,
+          /your\s+(real\s+)?name\s+is/gi,
+          /exposing\s+your\s+(identity|info)/gi
+        ],
+        severity: this.severityLevels.CRITICAL
+      },
+
+      revenge_porn: {
+        words: [
+          'nude', 'naked', 'porn', 'sex', 'intimate', 'private', 'photos',
+          'videos', 'leak', 'share', 'distribute', 'blackmail', 'extort'
+        ],
+        patterns: [
+          /i\s+(have|will)\s+(send|share|post)\s+(your\s+)?(nude|naked|porn)/gi,
+          /pay\s+me\s+or\s+i\s+(leak|share|post)/gi,
+          /your\s+(nude|naked|sex)\s+(pics|photos|videos)/gi,
+          /i\s+recorded\s+(our\s+)?sex/gi,
+          /blackmail\s+with\s+(nude|porn)/gi,
+          /revenge\s+(porn|pics)/gi
+        ],
+        severity: this.severityLevels.CRITICAL
+      },
+
+      slut_shaming: {
+        words: [
+          'slut', 'whore', 'hoe', 'skank', 'loose', 'easy', 'promiscuous',
+          'sleeps around', 'bed hopper', 'man eater', 'gold digger'
+        ],
+        patterns: [
+          /you\s+(are|r)\s+a\s+(slut|whore|hoe)/gi,
+          /sleeps\s+with\s+everyone/gi,
+          /loose\s+woman/gi,
+          /promiscuous\s+(girl|woman)/gi,
+          /gold\s+digging\s+(bitch|slut)/gi,
+          /man\s+eater/gi,
+          /easy\s+lay/gi
+        ],
+        severity: this.severityLevels.HIGH
+      },
+
+      body_shaming: {
+        words: [
+          'fat', 'ugly', 'disgusting', 'gross', 'obese', 'skinny', 'anorexic',
+          'bulimic', 'deformed', 'hideous', 'repulsive', 'unattractive'
+        ],
+        patterns: [
+          /you\s+(are|r)\s+(so\s+)?(fat|ugly|disgusting)/gi,
+          /lose\s+(some\s+)?weight/gi,
+          /you\s+look\s+(awful|terrible|hideous)/gi,
+          /nobody\s+would\s+(want|fuck)\s+you/gi,
+          /your\s+body\s+is\s+(gross|repulsive)/gi,
+          /eat\s+less/gi,
+          /you\s+(need|should)\s+(diet|exercise)/gi
+        ],
+        severity: this.severityLevels.HIGH
+      },
+
+      gaslighting: {
+        words: [
+          'crazy', 'insane', 'delusional', 'paranoid', 'psycho', 'mad',
+          'lying', 'liar', 'made up', 'imagining', 'hallucinating'
+        ],
+        patterns: [
+          /you\'re\s+(crazy|insane|delusional)/gi,
+          /that\s+(never\s+)?happened/gi,
+          /you\s+(made|are\s+making)\s+it\s+up/gi,
+          /you\'re\s+(lying|being\s+paranoid)/gi,
+          /i\s+never\s+said\s+that/gi,
+          /you\s+misremember/gi,
+          /you\'re\s+(hallucinating|imagining)/gi,
+          /stop\s+(being\s+)?dramatic/gi
+        ],
+        severity: this.severityLevels.MEDIUM
+      },
+
+      homophobia: {
+        words: [
+          'fag', 'faggot', 'homo', 'queer', 'gay', 'sodomite', 'fruit',
+          'pillow biter', 'cocksucker', 'butt pirate'
+        ],
+        patterns: [
+          /you\s+(are|r)\s+(gay|fag|homo)/gi,
+          /gay\s+people\s+are\s+(disgusting|wrong)/gi,
+          /homosexuality\s+is\s+(sin|wrong|disease)/gi,
+          /turn\s+straight/gi,
+          /pray\s+the\s+gay\s+away/gi,
+          /fag\s+hag/gi,
+          /fruit\s+loop/gi
+        ],
+        severity: this.severityLevels.CRITICAL
+      },
+
+      transphobia: {
+        words: [
+          'tranny', 'shemale', 'ladyboy', 'chick with dick', 'man in dress',
+          'confused', 'delusional', 'mentally ill', 'autogynephile'
+        ],
+        patterns: [
+          /you\s+(are|r)\s+(not\s+)?a\s+(real\s+)?(man|woman)/gi,
+          /biological\s+(man|woman)/gi,
+          /born\s+in\s+the\s+wrong\s+body/gi,
+          /tranny\s+chaser/gi,
+          /shemale\s+porn/gi,
+          /ladyboy/gi,
+          /chick\s+with\s+dick/gi
+        ],
+        severity: this.severityLevels.CRITICAL
+      },
+
+      religious_intolerance: {
+        words: [
+          'infidel', 'heathen', 'pagan', 'heretic', 'apostate', 'blasphemer',
+          'godless', 'atheist', 'sinner', 'devil worshipper'
+        ],
+        patterns: [
+          /you\s+(are|r)\s+going\s+to\s+(hell|burn)/gi,
+          /god\s+hates\s+you/gi,
+          /pray\s+for\s+forgiveness/gi,
+          /repent\s+or\s+(die|burn)/gi,
+          /your\s+religion\s+is\s+(wrong|false)/gi,
+          /convert\s+or\s+(die|leave)/gi,
+          /infidel/gi,
+          /heathen/gi
+        ],
+        severity: this.severityLevels.HIGH
+      },
+
+      ageism: {
+        words: [
+          'old', 'senile', 'dementia', 'outdated', 'obsolete', 'fossil',
+          'boomer', 'millennial', 'gen z', 'cringe', 'lame', 'uncool'
+        ],
+        patterns: [
+          /you\'re\s+(too\s+)?old\s+(for\s+that|to\s+understand)/gi,
+          /boomer\s+logic/gi,
+          /millennial\s+snowflake/gi,
+          /gen\s+z\s+(is\s+)?ruining/gi,
+          /get\s+off\s+my\s+lawn/gi,
+          /kids\s+these\s+days/gi,
+          /back\s+in\s+my\s+day/gi,
+          /you\s+(wouldn\'t|don\'t)\s+get\s+it/gi
+        ],
+        severity: this.severityLevels.MEDIUM
+      },
+
+      ableism: {
+        words: [
+          'retard', 'spastic', 'cripple', 'lame', 'deaf', 'blind', 'dumb',
+          'stupid', 'idiot', 'moron', 'imbecile', 'feeble minded'
+        ],
+        patterns: [
+          /you\s+(are|r)\s+(retarded|spastic|crippled)/gi,
+          /mentally\s+(disabled|challenged|handicapped)/gi,
+          /physically\s+(disabled|challenged)/gi,
+          /wheelchair\s+bound/gi,
+          /special\s+needs/gi,
+          /slow\s+learner/gi,
+          /learning\s+disability/gi
+        ],
+        severity: this.severityLevels.HIGH
+      },
+
+      gaming_harassment: {
+        words: [
+          'noob', 'scrub', 'tryhard', 'sweat', 'boosted', 'smurf', 'cheater',
+          'hacker', 'script kiddie', 'rage quit', 'tilt', 'camp', 'grief'
+        ],
+        patterns: [
+          /you\s+(are|r)\s+a\s+(noob|scrub|cheater)/gi,
+          /get\s+good/gi,
+          /uninstall\s+(the\s+game|lol)/gi,
+          /go\s+back\s+to\s+(kindergarten|school)/gi,
+          /your\s+mom/gi,
+          /ez\s+pz/gi,
+          /gg\s+no\s+re/gi,
+          /report\s+for\s+(cheating|hacking)/gi
+        ],
+        severity: this.severityLevels.MEDIUM
+      },
+
+      political_extremism: {
+        words: [
+          'liberal', 'conservative', 'leftist', 'right wing', 'fascist',
+          'communist', 'socialist', 'capitalist', 'snowflake', 'sheep',
+          'brainwashed', 'propaganda', 'fake news'
+        ],
+        patterns: [
+          /all\s+(liberals|conservatives|leftists)\s+are\s+(stupid|evil)/gi,
+          /you\s+(are|r)\s+a\s+(liberal|conservative|leftist)/gi,
+          /wake\s+up\s+(sheep|sheeple)/gi,
+          /red\s+pill/gi,
+          /blue\s+pilled/gi,
+          /controlled\s+opposition/gi,
+          /deep\s+state/gi,
+          /conspiracy\s+theorist/gi
+        ],
+        severity: this.severityLevels.MEDIUM
+      },
+
+      cancel_culture: {
+        words: [
+          'cancel', 'canceled', 'ratio', 'ratioed', 'clout', 'influencer',
+          'woke', 'problematic', 'offensive', 'triggering', 'unsafe',
+          'harmful', 'toxic', 'abusive', 'predator'
+        ],
+        patterns: [
+          /cancel\s+(this\s+)?\w+/gi,
+          /ratio\s+(this\s+)?tweet/gi,
+          /this\s+is\s+(problematic|offensive|harmful)/gi,
+          /you\s+(are|r)\s+(canceled|finished|done)/gi,
+          /expose\s+(this\s+)?\w+/gi,
+          /call\s+out/gi,
+          /accountability/gi,
+          /justice/gi
         ],
         severity: this.severityLevels.MEDIUM
       }
@@ -306,7 +539,7 @@ class ContentDetectionEngine {
           ));
         }
         // Fuzzy match
-        else if (this._fuzzyMatch(textWord, word, 0.6)) {
+        else if (this._fuzzyMatch(textWord, word)) {
           const similarity = this._calculateSimilarity(textWord, word);
           detections.push(new Detection(
             'word',
@@ -346,7 +579,7 @@ class ContentDetectionEngine {
     return detections;
   }
 
-  _fuzzyMatch(str1, str2, threshold = 0.8) {
+  _fuzzyMatch(str1, str2, threshold = 0.9) {
     if (str1.length < 3 || str2.length < 3) {
       return false;
     }
@@ -475,7 +708,20 @@ class ContentDetectionEngine {
       threats: "Express your feelings without threatening language or implications of harm.",
       cyberbullying: "Try to communicate constructively rather than attacking the person.",
       sexual_harassment: "Keep your communication appropriate and professional.",
-      profanity: "Consider using alternative words that are less offensive."
+      profanity: "Consider using alternative words that are less offensive.",
+      doxxing: "Never share personal information about others without their consent.",
+      revenge_porn: "Sharing intimate images without consent is illegal and harmful.",
+      slut_shaming: "Avoid judging others based on their personal choices or relationships.",
+      body_shaming: "Everyone deserves respect regardless of their appearance.",
+      gaslighting: "Be honest and respectful in your communications.",
+      homophobia: "Respect all individuals regardless of their sexual orientation.",
+      transphobia: "Respect all individuals regardless of their gender identity.",
+      religious_intolerance: "Respect diverse beliefs and avoid religious discrimination.",
+      ageism: "Value people of all ages and life experiences.",
+      ableism: "Respect all individuals regardless of physical or mental abilities.",
+      gaming_harassment: "Keep gaming fun and respectful for everyone.",
+      political_extremism: "Engage in civil discourse even on political topics.",
+      cancel_culture: "Focus on constructive dialogue rather than public shaming."
     };
 
     for (const category of categories) {
