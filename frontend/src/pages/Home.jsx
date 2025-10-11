@@ -176,13 +176,13 @@ const Home = () => {
           </div>
           <div className="flex justify-center mt-8">
             <Button 
-              onClick={() => navigate('/analytics')}
+              onClick={() => navigate('/dashboard')}
               variant="outline" 
               size="lg" 
               className="group hover-scale bg-gradient-primary text-white hover:text-white"
             >
               <BarChart className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
-              View Detailed Analytics
+              View Dashboard
             </Button>
           </div>
         </div>
