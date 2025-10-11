@@ -1,102 +1,105 @@
-import axios from 'axios';
-import { ErrorCodes } from './errorCodes';
+import axios from "axios";
+import { ErrorCodes } from "./errorCodes";
 
-// Create axios instance with default config
+// 🌐 Dynamically choose base URL depending on environment
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.MODE === "production"
+    ? "https://typeaware-cycberbully-ai.onrender.com/api"
+    : "http://localhost:5000/api");
+
+console.log("🛰️ Using API Base URL:", API_BASE_URL);
+
+// ✅ Create axios instance with defaults
 export const api = axios.create({
-  baseURL: process.env.VITE_API_URL || 'http://localhost:5000/api' || 'https://typeaware-cycberbully-ai.onrender.com/api',
+  baseURL: API_BASE_URL,
   timeout: 15000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
 });
 
-// Request interceptor
+// ✅ Request Interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add auth token if available
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// ✅ Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // Server responded with error status
-      const status = error.response.status;
-      const data = error.response.data;
+      const { status, data } = error.response;
 
-      // Handle specific error cases
+      // Handle known HTTP statuses
       switch (status) {
+        case 400:
+          error.code = "BAD_REQUEST";
+          break;
+
         case 401:
-          // Unauthorized - clear auth state and redirect to login
-          localStorage.removeItem('token');
-          window.location.href = '/login';
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+          error.code = "AUTH_UNAUTHORIZED";
           break;
 
         case 403:
-          // Forbidden - user doesn't have required permissions
-          error.code = 'AUTH_FORBIDDEN';
+          error.code = "AUTH_FORBIDDEN";
           break;
 
         case 404:
-          // Not Found
-          error.code = 'RESOURCE_NOT_FOUND';
+          error.code = "RESOURCE_NOT_FOUND";
           break;
 
         case 422:
-          // Validation Error
-          error.code = 'VALIDATION_ERROR';
+          error.code = "VALIDATION_ERROR";
           break;
 
         case 429:
-          // Rate Limit Exceeded
-          error.code = 'RATE_LIMIT_EXCEEDED';
+          error.code = "RATE_LIMIT_EXCEEDED";
           break;
 
         case 500:
-          // Server Error
-          error.code = 'API_ERROR';
+          error.code = "SERVER_ERROR";
           break;
 
         default:
-          error.code = 'UNKNOWN_ERROR';
+          error.code = "UNKNOWN_ERROR";
       }
 
-      // Add error details from server response
+      // Attach server message if available
       error.message = data?.message || error.message;
-      error.details = data?.details;
+      error.details = data?.details || null;
     } else if (error.request) {
       // Request made but no response received
-      error.code = 'API_TIMEOUT';
-      error.message = 'No response received from server';
+      error.code = "NETWORK_ERROR";
+      error.message = "No response received from server. Please check your connection.";
     } else {
-      // Error in request configuration
-      error.code = 'API_ERROR';
-      error.message = 'Error setting up request';
+      // Config or other setup issue
+      error.code = "REQUEST_SETUP_ERROR";
+      error.message = "There was an error setting up the API request.";
     }
 
     return Promise.reject(error);
   }
 );
 
-// Helper function to handle API errors
+// ✅ Centralized API Error Handler
 export const handleApiError = (error) => {
-  const errorCode = error.code || 'API_ERROR';
-  const errorDetails = ErrorCodes[errorCode];
+  const errorCode = error.code || "SERVER_ERROR";
+  const errorDetails = ErrorCodes[errorCode] || {};
 
   return {
-    code: errorDetails?.code || 500,
-    message: errorDetails?.message || 'An unexpected error occurred',
+    code: errorDetails.code || 500,
+    message: errorDetails.message || error.message || "Unexpected error occurred.",
     details: error.details || null,
-    originalError: error
+    originalError: error,
   };
 };
