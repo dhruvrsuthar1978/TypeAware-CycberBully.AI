@@ -22,6 +22,7 @@ import Contact from "./pages/Contact";
 import LearnMore from "./pages/LearnMore";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -158,6 +159,16 @@ const router = createBrowserRouter(
       element: (
         <Layout>
           <TermsOfService />
+        </Layout>
+      ),
+    },
+    {
+      path: "/reports",
+      element: (
+        <Layout>
+          <ProtectedRoute>
+            <Reports />
+          </ProtectedRoute>
         </Layout>
       ),
     },
