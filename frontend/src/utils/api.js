@@ -1,12 +1,8 @@
 import axios from "axios";
 import { ErrorCodes } from "./errorCodes";
 
-// 🌐 Dynamically choose base URL depending on environment
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.MODE === "production"
-    ? "https://typeaware-cycberbully-ai.onrender.com/api"
-    : "http://localhost:5000/api");
+// 🌐 Set a relative base URL to be handled by proxy
+const API_BASE_URL = "/api";
 
 console.log("🛰️ Using API Base URL:", API_BASE_URL);
 

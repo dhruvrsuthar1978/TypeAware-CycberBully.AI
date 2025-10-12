@@ -4,11 +4,16 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "env": {
-    "VITE_API_BASE_URL": "https://typeaware-cycberbully-ai.onrender.com",
     "VITE_AUTH_DOMAIN": "",
     "VITE_AUTH_CLIENT_ID": "",
     "NODE_ENV": "production"
   },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://typeaware-cycberbully-ai.onrender.com/api/$1"
+    }
+  ],
   "routes": [
     {
       "src": "/assets/(?<path>.*)",
@@ -18,7 +23,7 @@
       "dest": "/assets/$path"
     },
     {
-      "src": "/index\\.html",
+      "src": "/index\.html",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate"
       },
