@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../utils/api";
 import { Shield, Sparkles, AlertTriangle, Info, Zap, TrendingUp, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,12 +16,8 @@ function Demo() {
   // Function to call backend API for rephrasing
   const getRephraseSuggestions = async (text) => {
     try {
-      const response = await fetch("/api/ai/rephrase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
-      const data = await response.json();
+      const response = await api.post('/ai/rephrase', { message: text });
+      const data = response.data;
 
       if (data.success && data.data && data.data.suggestions && data.data.suggestions.length > 0) {
         const suggestion = data.data.suggestions[0].suggested_text;
@@ -46,12 +43,8 @@ function Demo() {
     }
     setIsAnalyzing(true);
     try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
-      });
-      const data = await response.json();
+      const response = await api.post('/analyze', { content: text });
+      const data = response.data;
 
       if (data.success && data.data) {
         const analysis = data.data;

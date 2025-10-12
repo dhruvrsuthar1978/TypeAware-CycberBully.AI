@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { api } from "../utils/api";
 
 function TextAnalyzer() {
   const [userText, setUserText] = useState("");
@@ -45,12 +46,8 @@ function TextAnalyzer() {
 
     // Default response for other text
     try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
-      });
-      const data = await response.json();
+      const response = await api.post('/analyze', { content: text });
+      const data = response.data;
 
       if (data.success && data.data) {
         const analysis = data.data;
@@ -92,12 +89,8 @@ function TextAnalyzer() {
 
     // Default behavior for other text
     try {
-      const response = await fetch("/api/ai/rephrase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText }),
-      });
-      const data = await response.json();
+      const response = await api.post('/ai/rephrase', { message: userText });
+      const data = response.data;
 
       if (data.success && data.data && data.data.suggestions && data.data.suggestions.length > 0) {
         setRephraseResult(data.data.suggestions[0].suggested_text);
