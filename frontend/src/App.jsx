@@ -15,6 +15,7 @@ import Demo from "./pages/Demo";
 import Extension from "./pages/Extension";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Settings from "./pages/Settings";
@@ -97,6 +98,14 @@ const router = createBrowserRouter(
       element: (
         <Layout>
           <Signup />
+        </Layout>
+      ),
+    },
+    {
+      path: "/forgot-password",
+      element: (
+        <Layout>
+          <ForgotPassword />
         </Layout>
       ),
     },

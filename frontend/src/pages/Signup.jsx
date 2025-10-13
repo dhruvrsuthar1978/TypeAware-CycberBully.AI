@@ -16,14 +16,46 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
   
   const { signup } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const validatePassword = (password) => {
+    const errors = [];
+    if (password.length < 8) {
+      errors.push("At least 8 characters long");
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push("At least one uppercase letter (A-Z)");
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push("At least one lowercase letter (a-z)");
+    }
+    if (!/\d{3,}/.test(password)) {
+      errors.push("At least three numbers (0-9)");
+    }
+    if (!/[!@#$%^&*]/.test(password)) {
+      errors.push("At least one special character (!@#$%^&*)");
+    }
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    const errors = validatePassword(formData.password);
+    if (errors.length > 0) {
+      setPasswordErrors(errors);
+      toast({
+        variant: "destructive",
+        title: "Password requirements not met",
+        description: "Please check the password requirements below."
+      });
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast({
         variant: "destructive",
@@ -33,19 +65,10 @@ const Signup = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast({
-        variant: "destructive",
-        title: "Password too short",
-        description: "Password must be at least 6 characters long."
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     const result = await signup(formData.name, formData.email, formData.password);
-    
+
     if (result.success) {
       toast({
         title: "Account created successfully!",
@@ -59,7 +82,7 @@ const Signup = () => {
         description: result.error || "Please try again."
       });
     }
-    
+
     setIsLoading(false);
   };
 
@@ -146,7 +169,10 @@ const Signup = () => {
                       type={showPassword ? "text" : "password"}
                       name="password"
                       value={formData.password}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        handleChange(e);
+                        setPasswordErrors(validatePassword(e.target.value));
+                      }}
                       className="w-full pl-12 pr-14 py-3 border-2 border-border/50 rounded-xl bg-background/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                       placeholder="Create a password"
                       required
@@ -158,6 +184,32 @@ const Signup = () => {
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
+                  </div>
+                  {/* Password Requirements */}
+                  <div className="text-xs space-y-1">
+                    <p className="font-semibold text-foreground">Password Requirements:</p>
+                    <ul className="text-muted-foreground space-y-0.5">
+                      <li className={`flex items-center gap-1 ${formData.password.length >= 8 ? 'text-green-600' : ''}`}>
+                        <span className="w-1 h-1 bg-current rounded-full"></span>
+                        At least 8 characters long
+                      </li>
+                      <li className={`flex items-center gap-1 ${/[A-Z]/.test(formData.password) ? 'text-green-600' : ''}`}>
+                        <span className="w-1 h-1 bg-current rounded-full"></span>
+                        At least one uppercase letter (A-Z)
+                      </li>
+                      <li className={`flex items-center gap-1 ${/[a-z]/.test(formData.password) ? 'text-green-600' : ''}`}>
+                        <span className="w-1 h-1 bg-current rounded-full"></span>
+                        At least one lowercase letter (a-z)
+                      </li>
+                      <li className={`flex items-center gap-1 ${/\d{3,}/.test(formData.password) ? 'text-green-600' : ''}`}>
+                        <span className="w-1 h-1 bg-current rounded-full"></span>
+                        At least three numbers (0-9)
+                      </li>
+                      <li className={`flex items-center gap-1 ${/[!@#$%^&*]/.test(formData.password) ? 'text-green-600' : ''}`}>
+                        <span className="w-1 h-1 bg-current rounded-full"></span>
+                        At least one special character (!@#$%^&*)
+                      </li>
+                    </ul>
                   </div>
                 </div>
 

@@ -15,14 +15,14 @@ const commonPatterns = {
     }),
 
   password: Joi.string()
-    .min(6)
+    .min(8)
     .max(128)
-    .pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d{3,})(?=.*[!@#$%^&*])/)
     .required()
     .messages({
-      'string.min': 'Password must be at least 6 characters long',
+      'string.min': 'Password must be at least 8 characters long',
       'string.max': 'Password cannot exceed 128 characters',
-      'string.pattern.base': 'Password must contain at least one letter and one number',
+      'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, three numbers, and one special character (!@#$%^&*)',
       'any.required': 'Password is required'
     }),
 

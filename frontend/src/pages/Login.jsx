@@ -168,6 +168,9 @@ const Login = () => {
                     Sign up
                   </Link>
                 </p>
+                <Link to="/forgot-password" className="text-sm text-primary hover:text-primary/80 font-semibold hover:underline block transition-colors">
+                  Forgot Password?
+                </Link>
                 <Link to="/" className="text-sm text-muted-foreground hover:text-foreground block transition-colors">
                   ← Back to Home
                 </Link>
