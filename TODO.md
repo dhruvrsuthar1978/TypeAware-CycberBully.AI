@@ -1,30 +1,39 @@
-# TODO: Add Forgot Password Link and Password Validation
+# TypeAware Extension Memory Management & Cleanup
 
-## Completed Tasks ✅
-- [x] Add "Forgot Password?" link to Login.jsx links section
-- [x] Create ForgotPassword.jsx page with email input form
-- [x] Add route for /forgot-password in App.jsx
-- [x] Update Signup.jsx to include password strength validation (at least 1 uppercase, 1 special char, 3+ numbers)
-- [x] Update backend/validators/authValidators.js to enforce new password requirements
-- [x] Test the changes to ensure validation works and links navigate correctly
-- [x] Commit and push changes to GitHub
+## Current Issues
+- MutationObserver never disconnected
+- Event listeners not removed from highlighted elements
+- Active popups not cleaned up on page unload
+- Debounced timers not cleared
+- No page unload handlers
+- Background script resource cleanup missing
 
-## Files Modified
-- frontend/src/pages/Login.jsx
-- frontend/src/pages/ForgotPassword.jsx (new)
-- frontend/src/App.jsx
-- frontend/src/pages/Signup.jsx
-- backend/validators/authValidators.js
-- TODO.md
+## Tasks
+- [ ] Add MutationObserver cleanup in content.js
+- [ ] Add event listener cleanup for highlighted elements
+- [ ] Add popup cleanup on page unload
+- [ ] Add timer cleanup mechanisms
+- [ ] Add page unload event handlers
+- [ ] Enhance background script cleanup
+- [ ] Add memory monitoring utilities
+- [ ] Test cleanup functionality
 
-## Password Requirements Implemented
-- At least 8 characters long
-- At least one uppercase letter (A-Z)
-- At least one lowercase letter (a-z)
-- At least three numbers (0-9)
-- At least one special character (!@#$%^&*)
+## Implementation Plan
+1. Content Script Cleanup
+   - Disconnect MutationObserver on page unload
+   - Remove event listeners from processed elements
+   - Clear active popups
+   - Clear debounced timers
 
-## Git Commit Details
-- **Commit Hash**: 23f4b29
-- **Branch**: main
-- **Status**: Successfully pushed to GitHub repository
+2. Background Script Cleanup
+   - Add cleanup for alarms
+   - Add cleanup for storage listeners
+   - Add memory monitoring
+
+3. Popup Cleanup
+   - Clear data on popup close
+   - Remove event listeners
+
+4. Storage Cleanup
+   - Enhanced periodic cleanup
+   - Memory usage monitoring

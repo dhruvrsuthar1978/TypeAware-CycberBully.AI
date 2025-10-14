@@ -148,6 +148,7 @@ class UIManager {
     if (this.stylesInjected) return;
 
     const style = document.createElement("style");
+    style.setAttribute("data-typeaware", "injected-styles");
     style.textContent = `
       .typeaware-highlight {
         position: relative;
@@ -356,6 +357,8 @@ class MutationObserver {
     this.debounceTimer = null;
     this.batchQueue = [];
     this.isProcessing = false;
+    this.eventListeners = new WeakMap(); // Track event listeners for cleanup
+    this.isDestroyed = false;
   }
 
   initializeObserver(detector, uiManager) {
@@ -434,12 +437,14 @@ class MutationObserver {
   }
 
   async processBatch(detector, uiManager) {
-    if (this.isProcessing) return;
+    if (this.isProcessing || this.isDestroyed) return;
 
     this.isProcessing = true;
     const batch = this.batchQueue.splice(0, config.DETECTION_THRESHOLDS.BATCH_SIZE);
 
     for (const element of batch) {
+      if (this.isDestroyed) break;
+
       const text = element.textContent.trim();
       const detection = await detector.detectContent(text, element);
 
@@ -450,9 +455,36 @@ class MutationObserver {
 
     this.isProcessing = false;
 
-    if (this.batchQueue.length > 0) {
+    if (this.batchQueue.length > 0 && !this.isDestroyed) {
       await this.processBatch(detector, uiManager);
     }
+  }
+
+  // Cleanup method to properly dispose of resources
+  destroy() {
+    if (this.isDestroyed) return;
+
+    this.isDestroyed = true;
+
+    // Disconnect the MutationObserver
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+
+    // Clear any pending timers
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+
+    // Clear batch queue
+    this.batchQueue.length = 0;
+
+    // Clear processed elements (WeakSet will be garbage collected)
+    // Note: WeakSet automatically cleans up when elements are removed from DOM
+
+    console.log("MutationObserver cleanup completed");
   }
 }
 
@@ -478,6 +510,43 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       document.querySelectorAll(".typeaware-highlight").forEach(el => {
         el.classList.remove("typeaware-highlight");
       });
+    }
+  }
+});
+
+// Page unload cleanup
+window.addEventListener("beforeunload", () => {
+  console.log("TypeAware: Cleaning up content script resources");
+
+  // Destroy mutation observer
+  if (mutationObserver) {
+    mutationObserver.destroy();
+  }
+
+  // Hide all active popups
+  if (uiManager) {
+    uiManager.hideAllPopups();
+  }
+
+  // Clear any remaining highlights
+  document.querySelectorAll(".typeaware-highlight").forEach(el => {
+    el.classList.remove("typeaware-highlight");
+  });
+
+  // Clear any injected styles (optional, as page is unloading)
+  const injectedStyles = document.querySelector('style[data-typeaware]');
+  if (injectedStyles) {
+    injectedStyles.remove();
+  }
+});
+
+// Additional cleanup on page visibility change (when tab becomes hidden)
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    // Page is hidden, reduce activity
+    if (mutationObserver && mutationObserver.debounceTimer) {
+      clearTimeout(mutationObserver.debounceTimer);
+      mutationObserver.debounceTimer = null;
     }
   }
 });
