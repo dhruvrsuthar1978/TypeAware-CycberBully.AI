@@ -23,7 +23,7 @@
       "dest": "/assets/$path"
     },
     {
-      "src": "/index\.html",
+      "src": "/index\\.html",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate"
       },

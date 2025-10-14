@@ -1,60 +1,69 @@
-
 {
   "manifest_version": 3,
   "name": "TypeAware - Online Safety Extension",
   "version": "1.0.0",
   "description": "Detect and report abusive online behavior in real-time",
-  
+
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "alarms",
+    "tabs"
   ],
-  
+
   "host_permissions": [
-    "*://twitter.com/*",
-    "*://x.com/*",
-    "*://youtube.com/*",
-    "*://reddit.com/*",
-    "*://facebook.com/*",
-    "*://instagram.com/*"
+    "https://twitter.com/*",
+    "https://x.com/*",
+    "https://www.youtube.com/*",
+    "https://www.reddit.com/*",
+    "https://www.facebook.com/*",
+    "https://www.instagram.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
-  
+
   "background": {
     "service_worker": "background.js"
   },
-  
+
   "content_scripts": [
     {
       "matches": [
-        "*://twitter.com/*",
-        "*://x.com/*",
-        "*://youtube.com/*",
-        "*://reddit.com/*",
-        "*://facebook.com/*",
-        "*://instagram.com/*"
+        "https://twitter.com/*",
+        "https://x.com/*",
+        "https://www.youtube.com/*",
+        "https://www.reddit.com/*",
+        "https://www.facebook.com/*",
+        "https://www.instagram.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
-  
+
   "action": {
     "default_popup": "popup.html",
-    "default_title": "TypeAware Extension"
+    "default_title": "TypeAware - Online Safety Extension",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
-  
+
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  
+
   "web_accessible_resources": [
     {
-      "resources": ["icons/*", "popup.html"],
+      "resources": ["icons/*"],
       "matches": ["<all_urls>"]
     }
   ]

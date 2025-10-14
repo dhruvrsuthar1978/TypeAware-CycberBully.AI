@@ -1,528 +1,483 @@
+// Local detection patterns - no API needed
+const detectionPatterns = {
+  HARASSMENT: {
+    severity: "high",
+    color: "#dc2626",
+    patterns: [
+      /\b(loser|stupid|idiot|dumb|fool|hate you|kill yourself|kys)\b/gi,
+      /stfu|shut.*up|go away|nobody likes/gi,
+      /you're.*trash|you suck/gi
+    ]
+  },
+  HATE_SPEECH: {
+    severity: "high",
+    color: "#b91c1c",
+    patterns: [
+      /\b(damn|hell|crap)\b/gi, // mild version for demo
+      /(slur words would go here)/gi
+    ]
+  },
+  PROFANITY: {
+    severity: "medium",
+    color: "#ea580c",
+    patterns: [
+      /\b(hell|damn|crap|sucks?|pissed)\b/gi
+    ]
+  },
+  SPAM: {
+    severity: "low",
+    color: "#ca8a04",
+    patterns: [
+      /buy now|click here|limited time|act now/gi,
+      /follow my link|check my profile/gi
+    ]
+  }
+};
 
-class TypeAwareDetector {
+const config = {
+  API_BASE_URL: "https://api.typeaware.com",
+  EXTENSION_ID: chrome.runtime.id,
+  VERSION: "1.0.0",
+  DETECTION_THRESHOLDS: {
+    MIN_TEXT_LENGTH: 3,
+    MAX_TEXT_LENGTH: 5000,
+    BATCH_SIZE: 5,
+    DEBOUNCE_DELAY: 300
+  },
+  UI: {
+    POPUP_FADE_DELAY: 5000,
+    MAX_SUGGESTIONS: 3,
+    ANIMATION_DURATION: 200
+  }
+};
+
+class ContentDetector {
   constructor() {
-    this.isEnabled = true;
-    this.processed = new Set();
-    this.abusivePatterns = this.initializePatterns();
-    this.suggestions = this.initializeSuggestions();
-    
-    this.init();
+    this.cache = new Map();
+    this.processingQueue = new Set();
   }
 
-  async init() {
-    // Check if extension is enabled
-    const result = await chrome.storage.local.get(['enabled']);
-    this.isEnabled = result.enabled !== false;
-    
-    if (this.isEnabled) {
-      this.startDetection();
+  async detectContent(text, element) {
+    if (!text || text.length < config.DETECTION_THRESHOLDS.MIN_TEXT_LENGTH) {
+      return null;
     }
-    
-    // Listen for messages from popup
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.action === 'toggleExtension') {
-        this.isEnabled = request.enabled;
-        if (this.isEnabled) {
-          this.startDetection();
-        } else {
-          this.stopDetection();
-        }
-      }
-    });
-  }
 
-  initializePatterns() {
-    return {
-      harassment: [
-        /\b(kill\s+yourself|kys)\b/gi,
-        /\b(you\s+suck|you're\s+stupid|idiot|moron)\b/gi,
-        /\b(shut\s+up|stfu)\b/gi,
-        /\b(loser|pathetic|worthless)\b/gi
-      ],
-      hate: [
-        /\b(racist|fascist|nazi)\b/gi,
-        /\b(hate\s+you|i\s+hate)\b/gi,
-        /\b(disgusting|gross|sick)\b/gi
-      ],
-      spam: [
-        /\b(buy\s+now|click\s+here|free\s+money)\b/gi,
-        /\b(amazing\s+offer|limited\s+time)\b/gi,
-        /\b(www\.|http|\.com)\b/gi
-      ],
-      profanity: [
-        /\b(f[u\*]ck|sh[i\*]t|damn|hell)\b/gi,
-        /\b(b[i\*]tch|a[s\*]{2}hole)\b/gi
-      ],
-      threats: [
-        /\b(i'll\s+kill|gonna\s+hurt|beat\s+you\s+up)\b/gi,
-        /\b(watch\s+out|you're\s+dead)\b/gi,
-        /\b(threat|violence|harm)\b/gi
-      ]
-    };
-  }
-
-  initializeSuggestions() {
-    return {
-      harassment: [
-        "I disagree with your point of view",
-        "That's not how I see it",
-        "I think differently about this"
-      ],
-      hate: [
-        "I respectfully disagree",
-        "We have different perspectives",
-        "I see this differently"
-      ],
-      spam: [
-        "Here's something you might find interesting",
-        "I'd like to share this with you",
-        "You might want to check this out"
-      ],
-      profanity: [
-        "That's really frustrating",
-        "This is quite annoying",
-        "I'm disappointed by this"
-      ],
-      threats: [
-        "I'm really upset about this",
-        "This situation is very frustrating",
-        "I strongly disagree with this"
-      ]
-    };
-  }
-
-  startDetection() {
-    console.log('TypeAware detection started');
+    // Local pattern matching instead of API call
+    const result = this.analyzeWithPatterns(text);
     
-    // Detect existing content
-    this.scanPage();
-    
-    // Monitor for new content
-    this.observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            this.scanElement(node);
-          }
-        });
-      });
-    });
-    
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-    
-    // Monitor text inputs
-    this.monitorInputs();
-  }
-
-  stopDetection() {
-    console.log('TypeAware detection stopped');
-    
-    if (this.observer) {
-      this.observer.disconnect();
+    if (result && result.category !== "none") {
+      this.logDetection(result, text, element);
     }
-    
-    // Remove all warnings
-    document.querySelectorAll('.typeaware-warning').forEach(el => el.remove());
-    document.querySelectorAll('.typeaware-overlay').forEach(el => el.remove());
-  }
 
-  scanPage() {
-    // Scan common content areas based on platform
-    const selectors = this.getPlatformSelectors();
-    
-    selectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(element => {
-        this.scanElement(element);
-      });
-    });
-  }
-
-  getPlatformSelectors() {
-    const hostname = window.location.hostname;
-    
-    if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
-      return ['[data-testid="tweetText"]', '[data-testid="tweet"]', 'div[role="textbox"]'];
-    } else if (hostname.includes('youtube.com')) {
-      return ['#content-text', '#comment-content', '.comment-text'];
-    } else if (hostname.includes('reddit.com')) {
-      return ['.usertext-body', '.md', '[data-testid="comment"]'];
-    } else if (hostname.includes('facebook.com')) {
-      return ['[data-testid="post_message"]', '.userContent', 'div[role="textbox"]'];
-    }
-    
-    // Generic selectors
-    return ['p', 'div', 'span', 'textarea', 'input[type="text"]'];
-  }
-
-  scanElement(element) {
-    if (this.processed.has(element) || !element.textContent) {
-      return;
-    }
-    
-    this.processed.add(element);
-    
-    const text = element.textContent.trim();
-    if (text.length < 3) return;
-    
-    const detection = this.detectAbusiveContent(text);
-    
-    if (detection.isAbusive) {
-      this.handleAbusiveContent(element, detection, text);
-    }
-    
-    // Update stats
-    this.updateStats({ totalScanned: 1 });
-  }
-
-  detectAbusiveContent(text) {
-    const result = {
-      isAbusive: false,
-      types: [],
-      confidence: 0,
-      matches: []
-    };
-    
-    for (const [type, patterns] of Object.entries(this.abusivePatterns)) {
-      for (const pattern of patterns) {
-        const matches = text.match(pattern);
-        if (matches) {
-          result.isAbusive = true;
-          result.types.push(type);
-          result.matches.push(...matches);
-          result.confidence = Math.max(result.confidence, 0.8);
-        }
-      }
-    }
-    
-    // Additional heuristics
-    if (!result.isAbusive) {
-      // Check for excessive caps
-      const capsRatio = (text.match(/[A-Z]/g) || []).length / text.length;
-      if (capsRatio > 0.7 && text.length > 10) {
-        result.isAbusive = true;
-        result.types.push('aggressive');
-        result.confidence = 0.6;
-      }
-      
-      // Check for repetitive characters
-      if (/(.)\1{4,}/.test(text)) {
-        result.isAbusive = true;
-        result.types.push('spam');
-        result.confidence = 0.5;
-      }
-    }
-    
     return result;
   }
 
-  handleAbusiveContent(element, detection, originalText) {
-    // Create warning overlay
-    const overlay = this.createWarningOverlay(element, detection, originalText);
-    
-    // Blur the content
-    element.style.filter = 'blur(3px)';
-    element.style.opacity = '0.7';
-    
-    // Store detection
-    this.storeDetection(detection, originalText);
-    
-    // Update stats
-    this.updateStats({ threatsDetected: 1 });
-  }
-
-  createWarningOverlay(element, detection, originalText) {
-    const overlay = document.createElement('div');
-    overlay.className = 'typeaware-overlay';
-    overlay.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255, 0, 0, 0.1);
-      border: 2px solid #ef4444;
-      border-radius: 8px;
-      z-index: 10000;
-      pointer-events: none;
-    `;
-    
-    // Make parent relative if needed
-    const parent = element.offsetParent || element.parentElement;
-    if (parent && getComputedStyle(parent).position === 'static') {
-      parent.style.position = 'relative';
-    }
-    
-    const warning = document.createElement('div');
-    warning.className = 'typeaware-warning';
-    warning.style.cssText = `
-      position: absolute;
-      top: -40px;
-      left: 0;
-      background: #ef4444;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
-      z-index: 10001;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    `;
-    
-    const primaryType = detection.types[0] || 'inappropriate';
-    warning.textContent = `⚠️ Potentially ${primaryType} content detected`;
-    
-    // Add action buttons
-    const actions = document.createElement('div');
-    actions.style.cssText = `
-      position: absolute;
-      top: -80px;
-      left: 0;
-      display: flex;
-      gap: 8px;
-      z-index: 10002;
-    `;
-    
-    // Show content button
-    const showBtn = document.createElement('button');
-    showBtn.textContent = 'Show';
-    showBtn.style.cssText = `
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-    `;
-    showBtn.onclick = () => {
-      element.style.filter = 'none';
-      element.style.opacity = '1';
-      overlay.remove();
-    };
-    
-    // Report button
-    const reportBtn = document.createElement('button');
-    reportBtn.textContent = 'Report';
-    reportBtn.style.cssText = `
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-    `;
-    reportBtn.onclick = () => {
-      this.reportContent(detection, originalText);
-      reportBtn.textContent = 'Reported';
-      reportBtn.style.background = '#10b981';
-    };
-    
-    // Suggestions button
-    const suggestBtn = document.createElement('button');
-    suggestBtn.textContent = 'Suggest';
-    suggestBtn.style.cssText = `
-      background: #10b981;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-    `;
-    suggestBtn.onclick = () => {
-      this.showSuggestions(element, detection, originalText);
-    };
-    
-    actions.appendChild(showBtn);
-    actions.appendChild(reportBtn);
-    actions.appendChild(suggestBtn);
-    
-    overlay.appendChild(warning);
-    overlay.appendChild(actions);
-    
-    // Position relative to element
-    element.style.position = 'relative';
-    element.appendChild(overlay);
-    
-    return overlay;
-  }
-
-  showSuggestions(element, detection, originalText) {
-    const primaryType = detection.types[0] || 'harassment';
-    const suggestions = this.suggestions[primaryType] || this.suggestions.harassment;
-    
-    const popup = document.createElement('div');
-    popup.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 400px;
-      z-index: 20000;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    `;
-    
-    popup.innerHTML = `
-      <h3 style="margin: 0 0 12px 0; color: #374151; font-size: 16px;">Suggested Alternatives</h3>
-      <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 14px;">Consider using one of these alternatives:</p>
-      <div style="margin-bottom: 16px;">
-        ${suggestions.map(suggestion => `
-          <div style="
-            background: #f3f4f6;
-            padding: 8px 12px;
-            margin: 4px 0;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            border: 1px solid transparent;
-          " 
-          class="suggestion-item"
-          onmouseover="this.style.background='#e5e7eb'; this.style.borderColor='#d1d5db'"
-          onmouseout="this.style.background='#f3f4f6'; this.style.borderColor='transparent'"
-          onclick="navigator.clipboard.writeText('${suggestion}'); this.innerHTML='✓ Copied to clipboard';"
-          >${suggestion}</div>
-        `).join('')}
-      </div>
-      <button onclick="this.parentElement.remove()" style="
-        background: #6b7280;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        float: right;
-      ">Close</button>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-      if (popup.parentElement) {
-        popup.remove();
+  analyzeWithPatterns(text) {
+    for (const [category, data] of Object.entries(detectionPatterns)) {
+      for (const pattern of data.patterns) {
+        if (pattern.test(text)) {
+          return {
+            category: category.toLowerCase(),
+            severity: data.severity,
+            confidence: 0.85,
+            explanation: `Detected ${category.replace(/_/g, " ").toLowerCase()} in content`,
+            suggestion: "Consider using more respectful language",
+            color: data.color
+          };
+        }
       }
-    }, 10000);
+    }
+
+    return {
+      category: "none",
+      severity: "low",
+      confidence: 0,
+      explanation: "",
+      suggestion: "",
+      color: ""
+    };
   }
 
-  monitorInputs() {
-    // Monitor text inputs for real-time detection
-    document.addEventListener('input', (e) => {
-      if (!this.isEnabled) return;
-      
-      const element = e.target;
-      if (element.tagName === 'TEXTAREA' || 
-          (element.tagName === 'INPUT' && element.type === 'text') ||
-          element.contentEditable === 'true') {
-        
-        const text = element.value || element.textContent;
-        if (text && text.length > 10) {
-          const detection = this.detectAbusiveContent(text);
-          
-          if (detection.isAbusive) {
-            this.showInputWarning(element, detection);
-          } else {
-            this.hideInputWarning(element);
+  async logDetection(detection, text, element) {
+    try {
+      const metadata = {
+        platform: this.detectPlatform(),
+        url: window.location.href,
+        timestamp: Date.now(),
+        category: detection.category,
+        severity: detection.severity,
+        confidence: detection.confidence,
+        textLength: text.length,
+        elementType: element?.tagName?.toLowerCase() || "unknown"
+      };
+
+      // Store detection locally
+      await chrome.runtime.sendMessage({
+        action: "updateStats",
+        data: {
+          totalScanned: 1,
+          threatsDetected: 1
+        }
+      });
+
+      console.log("Threat detected:", metadata);
+    } catch (error) {
+      console.error("Detection logging error:", error);
+    }
+  }
+
+  detectPlatform() {
+    const hostname = window.location.hostname.toLowerCase();
+    if (hostname.includes("instagram.com")) return "instagram";
+    if (hostname.includes("twitter.com") || hostname.includes("x.com")) return "twitter";
+    if (hostname.includes("youtube.com")) return "youtube";
+    if (hostname.includes("reddit.com")) return "reddit";
+    if (hostname.includes("facebook.com")) return "facebook";
+    return "web";
+  }
+}
+
+class UIManager {
+  constructor() {
+    this.activePopups = new Set();
+    this.stylesInjected = false;
+    this.injectStyles();
+  }
+
+  injectStyles() {
+    if (this.stylesInjected) return;
+
+    const style = document.createElement("style");
+    style.textContent = `
+      .typeaware-highlight {
+        position: relative;
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.15));
+        border-radius: 4px;
+        border: 2px solid rgba(239, 68, 68, 0.5);
+        padding: 2px 4px;
+        margin: 0 1px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+      }
+
+      .typeaware-highlight:hover {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.25));
+        border-color: rgba(239, 68, 68, 0.7);
+        box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+      }
+
+      .typeaware-popup {
+        position: fixed;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border: 2px solid #dc2626;
+        z-index: 999999;
+        max-width: 350px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+        transition: all 0.2s ease;
+        pointer-events: none;
+      }
+
+      .typeaware-popup.visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+
+      .typeaware-popup-header {
+        padding: 12px 16px;
+        border-bottom: 2px solid #dc2626;
+        background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        border-radius: 10px 10px 0 0;
+        font-weight: 600;
+        color: #dc2626;
+      }
+
+      .typeaware-popup-content {
+        padding: 12px 16px;
+        font-size: 13px;
+        color: #374151;
+      }
+
+      .typeaware-popup-suggestion {
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-top: 8px;
+        font-style: italic;
+        color: #166534;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .typeaware-popup-suggestion:hover {
+        background: #dcfce7;
+        border-color: #4ade80;
+      }
+
+      .typeaware-popup-actions {
+        padding: 8px 16px 12px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .typeaware-btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s ease;
+      }
+
+      .typeaware-btn-primary {
+        background: #dc2626;
+        color: white;
+      }
+
+      .typeaware-btn-primary:hover {
+        background: #b91c1c;
+      }
+
+      .typeaware-btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+
+      .typeaware-btn-secondary:hover {
+        background: #e2e8f0;
+      }
+
+      .typeaware-fade-out {
+        opacity: 0 !important;
+        transform: translateY(-10px) scale(0.95) !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+    this.stylesInjected = true;
+  }
+
+  highlightElement(element, detection) {
+    if (element.classList.contains("typeaware-highlight")) return;
+
+    element.classList.add("typeaware-highlight");
+    element.setAttribute("data-typeaware-category", detection.category);
+    element.setAttribute("data-typeaware-severity", detection.severity);
+
+    element.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.showSuggestionPopup(element, detection);
+    });
+  }
+
+  showSuggestionPopup(element, detection) {
+    this.hideAllPopups();
+
+    const rect = element.getBoundingClientRect();
+    const popup = this.createPopup(detection);
+
+    popup.style.left = `${rect.left + window.scrollX}px`;
+    popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+
+    document.body.appendChild(popup);
+
+    setTimeout(() => popup.classList.add("visible"), 10);
+    setTimeout(() => this.hidePopup(popup), config.UI.POPUP_FADE_DELAY);
+
+    this.activePopups.add(popup);
+  }
+
+  createPopup(detection) {
+    const popup = document.createElement("div");
+    popup.className = "typeaware-popup";
+
+    popup.innerHTML = `
+      <div class="typeaware-popup-header">
+        ⚠️ ${this.capitalizeFirst(detection.category)} Detected
+      </div>
+      <div class="typeaware-popup-content">
+        <p style="margin: 0 0 8px; color: #6b7280;">
+          ${detection.explanation || "This content may be harmful or inappropriate."}
+        </p>
+        ${detection.suggestion ? `
+          <div class="typeaware-popup-suggestion">
+            💡 ${detection.suggestion}
+          </div>
+        ` : ""}
+      </div>
+      <div class="typeaware-popup-actions">
+        <button class="typeaware-btn typeaware-btn-secondary" onclick="this.closest('.typeaware-popup').remove()">
+          Dismiss
+        </button>
+        <button class="typeaware-btn typeaware-btn-primary" onclick="window.open('https://typeaware.com', '_blank')">
+          Learn More
+        </button>
+      </div>
+    `;
+
+    return popup;
+  }
+
+  hideAllPopups() {
+    this.activePopups.forEach(popup => this.hidePopup(popup));
+    this.activePopups.clear();
+  }
+
+  hidePopup(popup) {
+    if (!popup) return;
+
+    popup.classList.add("typeaware-fade-out");
+    setTimeout(() => {
+      if (popup.parentNode) popup.parentNode.removeChild(popup);
+      this.activePopups.delete(popup);
+    }, config.UI.ANIMATION_DURATION);
+  }
+
+  capitalizeFirst(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+}
+
+class MutationObserver {
+  constructor() {
+    this.observer = null;
+    this.processedElements = new WeakSet();
+    this.debounceTimer = null;
+    this.batchQueue = [];
+    this.isProcessing = false;
+  }
+
+  initializeObserver(detector, uiManager) {
+    this.observer = new window.MutationObserver((mutations) => {
+      this.debounceProcessing(() => this.processMutations(mutations, detector, uiManager));
+    });
+
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+  }
+
+  debounceProcessing(callback) {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(callback, config.DETECTION_THRESHOLDS.DEBOUNCE_DELAY);
+  }
+
+  processMutations(mutations, detector, uiManager) {
+    const newElements = new Set();
+
+    mutations.forEach((mutation) => {
+      if (mutation.type === "childList") {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            this.findTextElements(node).forEach(el => newElements.add(el));
           }
+        });
+      } else if (mutation.type === "characterData") {
+        const parent = mutation.target.parentElement;
+        if (parent && this.isTextElement(parent)) {
+          newElements.add(parent);
         }
       }
     });
-  }
 
-  showInputWarning(element, detection) {
-    // Remove existing warning
-    this.hideInputWarning(element);
-    
-    const warning = document.createElement('div');
-    warning.className = 'typeaware-input-warning';
-    warning.style.cssText = `
-      position: absolute;
-      bottom: 100%;
-      left: 0;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #dc2626;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      margin-bottom: 4px;
-      z-index: 10000;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    `;
-    
-    const primaryType = detection.types[0] || 'inappropriate';
-    warning.innerHTML = `
-      <div style="font-weight: 600; margin-bottom: 4px;">⚠️ Potentially ${primaryType} content</div>
-      <div style="font-size: 11px;">Consider rephrasing your message</div>
-    `;
-    
-    element.style.position = 'relative';
-    element.parentElement.style.position = 'relative';
-    element.parentElement.appendChild(warning);
-  }
-
-  hideInputWarning(element) {
-    const existing = element.parentElement?.querySelector('.typeaware-input-warning');
-    if (existing) {
-      existing.remove();
+    if (newElements.size > 0) {
+      this.batchQueue.push(...Array.from(newElements));
+      this.processBatch(detector, uiManager);
     }
   }
 
-  async storeDetection(detection, content) {
-    const result = await chrome.storage.local.get(['detections']);
-    const detections = result.detections || [];
-    
-    detections.push({
-      ...detection,
-      content: content.substring(0, 200), // Limit content length
-      platform: window.location.hostname,
-      url: window.location.href,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Keep only last 50 detections
-    if (detections.length > 50) {
-      detections.splice(0, detections.length - 50);
-    }
-    
-    await chrome.storage.local.set({ detections });
-  }
-
-  reportContent(detection, content) {
-    chrome.runtime.sendMessage({
-      action: 'reportContent',
-      data: {
-        content: content.substring(0, 500),
-        types: detection.types,
-        confidence: detection.confidence,
-        platform: window.location.hostname,
-        url: window.location.href,
-        userAgent: navigator.userAgent
+  findTextElements(element) {
+    const elements = [];
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node) => {
+          if (this.isTextElement(node) && node.textContent.trim().length > 0) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        }
       }
-    });
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+      elements.push(node);
+    }
+
+    return elements;
   }
 
-  updateStats(update) {
-    chrome.runtime.sendMessage({
-      action: 'updateStats',
-      data: update
-    });
+  isTextElement(element) {
+    const tag = element.tagName.toLowerCase();
+
+    const excludedTags = ["script", "style", "noscript", "meta", "link"];
+    if (excludedTags.includes(tag)) return false;
+
+    if (this.processedElements.has(element)) return false;
+
+    return true;
+  }
+
+  async processBatch(detector, uiManager) {
+    if (this.isProcessing) return;
+
+    this.isProcessing = true;
+    const batch = this.batchQueue.splice(0, config.DETECTION_THRESHOLDS.BATCH_SIZE);
+
+    for (const element of batch) {
+      const text = element.textContent.trim();
+      const detection = await detector.detectContent(text, element);
+
+      if (detection && detection.category !== "none") {
+        uiManager.highlightElement(element, detection);
+      }
+    }
+
+    this.isProcessing = false;
+
+    if (this.batchQueue.length > 0) {
+      await this.processBatch(detector, uiManager);
+    }
   }
 }
 
-// Initialize the detector when the page loads
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    new TypeAwareDetector();
-  });
-} else {
-  new TypeAwareDetector();
-}
+// Initialize everything
+const detector = new ContentDetector();
+const uiManager = new UIManager();
+const mutationObserver = new MutationObserver();
+
+mutationObserver.initializeObserver(detector, uiManager);
+
+// Process existing content
+document.addEventListener("DOMContentLoaded", () => {
+  const elements = mutationObserver.findTextElements(document.body);
+  mutationObserver.batchQueue.push(...elements);
+  mutationObserver.processBatch(detector, uiManager);
+});
+
+// Handle messages from background script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "toggleExtension") {
+    // Disable/enable detection based on request
+    if (!request.enabled) {
+      document.querySelectorAll(".typeaware-highlight").forEach(el => {
+        el.classList.remove("typeaware-highlight");
+      });
+    }
+  }
+});

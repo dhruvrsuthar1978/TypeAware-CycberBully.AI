@@ -21,7 +21,7 @@ build/
 .cache/
 .next/
 out/
-
+.qodo/
 # Python
 __pycache__/
 *.py[cod]

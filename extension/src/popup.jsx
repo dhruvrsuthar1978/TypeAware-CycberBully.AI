@@ -192,6 +192,16 @@ const Popup = () => {
 };
 
 // Mount the React app to the DOM
-const container = document.getElementById('root');
-const root = createRoot(container);
-root.render(<Popup />);
+function initPopup() {
+  const container = document.getElementById('root');
+  if (container) {
+    const root = createRoot(container);
+    root.render(<Popup />);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPopup);
+} else {
+  initPopup();
+}

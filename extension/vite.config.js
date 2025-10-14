@@ -5,7 +5,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  
+
   build: {
     outDir: 'dist',
     rollupOptions: {
@@ -21,14 +21,21 @@ export default defineConfig({
       }
     }
   },
-  
+
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')
     }
   },
-  
+
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
+  },
+
+  // Add esbuild options to handle potential syntax issues
+  esbuild: {
+    // Allow JSX in .js files for content scripts
+    loader: 'jsx',
+    include: /\.(js|jsx)$/,
   }
 });
