@@ -35,11 +35,50 @@ async function loadStats() {
 document.getElementById('status').addEventListener('click', async () => {
   try {
     const data = await chrome.storage.local.get(['enabled']);
-    const newEnabled = !data.enabled;
+    const newEnabled = !(data.enabled !== false);
     await chrome.storage.local.set({ enabled: newEnabled });
     loadStats();
+    console.log('Extension toggled to:', newEnabled ? 'ON' : 'OFF');
   } catch (error) {
     console.error('Error toggling status:', error);
+  }
+});
+
+// Scan messages button
+document.getElementById('scanBtn').addEventListener('click', async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      // Send message to content script to scan messages
+      chrome.tabs.sendMessage(tab.id, { action: 'scanMessages' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Content script not loaded on this page');
+        } else {
+          console.log('Scanning messages on:', tab.url);
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error scanning messages:', error);
+  }
+});
+
+// Check threats button
+document.getElementById('threatBtn').addEventListener('click', async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      // Send message to content script to check threats
+      chrome.tabs.sendMessage(tab.id, { action: 'checkThreats' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Content script not loaded on this page');
+        } else {
+          console.log('Checking threats on:', tab.url);
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error checking threats:', error);
   }
 });
 
@@ -57,6 +96,7 @@ document.getElementById('clearBtn').addEventListener('click', async () => {
         stats: { totalScanned: 0, threatsDetected: 0, reportsSubmitted: 0 }
       });
       loadStats();
+      console.log('Data cleared');
     } catch (error) {
       console.error('Error clearing data:', error);
     }

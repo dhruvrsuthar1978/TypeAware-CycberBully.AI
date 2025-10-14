@@ -601,6 +601,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // Properly remove all highlights with event listener cleanup
       uiManager.removeAllHighlights();
     }
+  } else if (request.action === "scanMessages") {
+    // Manual scan for messages
+    console.log("Manual message scan triggered");
+    initializeScan();
+  } else if (request.action === "checkThreats") {
+    // Manual threat check
+    console.log("Manual threat check triggered");
+    initializeScan();
   }
 });
 

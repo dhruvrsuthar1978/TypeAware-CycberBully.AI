@@ -83,6 +83,18 @@ function setupEventListeners() {
     statusBtn.addEventListener('click', toggleExtension);
   }
 
+  // Scan messages button
+  const scanBtn = document.getElementById('scanBtn');
+  if (scanBtn) {
+    scanBtn.addEventListener('click', scanMessages);
+  }
+
+  // Check threats button
+  const threatBtn = document.getElementById('threatBtn');
+  if (threatBtn) {
+    threatBtn.addEventListener('click', checkThreats);
+  }
+
   // Dashboard button
   const dashboardBtn = document.getElementById('dashboardBtn');
   if (dashboardBtn) {
@@ -112,9 +124,37 @@ async function toggleExtension() {
 // Open dashboard in new tab
 function openDashboard() {
   try {
-    chrome.tabs.create({ url: 'http://localhost:3000/dashboard' });
+    chrome.tabs.create({ url: 'http://localhost:8080/dashboard' });
   } catch (error) {
     console.error('Error opening dashboard:', error);
+  }
+}
+
+// Scan messages on current active tab
+async function scanMessages() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      // Send message to content script to scan messages
+      chrome.tabs.sendMessage(tab.id, { action: 'scanMessages' });
+      console.log('Scanning messages on:', tab.url);
+    }
+  } catch (error) {
+    console.error('Error scanning messages:', error);
+  }
+}
+
+// Check threats on current active tab
+async function checkThreats() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      // Send message to content script to check threats
+      chrome.tabs.sendMessage(tab.id, { action: 'checkThreats' });
+      console.log('Checking threats on:', tab.url);
+    }
+  } catch (error) {
+    console.error('Error checking threats:', error);
   }
 }
 

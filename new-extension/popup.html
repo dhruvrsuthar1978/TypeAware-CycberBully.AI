@@ -122,24 +122,25 @@
     }
 
     .actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 20px;
     }
 
     .btn {
-      flex: 1;
-      padding: 12px;
+      padding: 10px;
       border: none;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
+      text-align: center;
     }
 
     .btn-primary {
@@ -212,8 +213,14 @@
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" id="dashboardBtn">
-        📊 Open Dashboard
+      <button class="btn btn-primary" id="scanBtn">
+        🔍 Scan Messages
+      </button>
+      <button class="btn btn-primary" id="threatBtn">
+        ⚠️ Check Threats
+      </button>
+      <button class="btn btn-secondary" id="dashboardBtn">
+        📊 Dashboard
       </button>
       <button class="btn btn-secondary" id="clearBtn">
         🗑️ Clear Data
@@ -221,6 +228,6 @@
     </div>
   </div>
 
-  <script src="popup.js"></script>
+  <script src="popup-script.js"></script>
 </body>
 </html>
