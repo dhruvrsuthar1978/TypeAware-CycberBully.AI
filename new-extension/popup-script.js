@@ -45,7 +45,7 @@ document.getElementById('status').addEventListener('click', async () => {
 
 // Dashboard button
 document.getElementById('dashboardBtn').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'http://localhost:3000/dashboard' });
+  chrome.tabs.create({ url: 'http://localhost:8080/dashboard' });
 });
 
 // Clear data button
