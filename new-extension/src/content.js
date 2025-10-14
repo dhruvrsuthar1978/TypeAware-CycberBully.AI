@@ -164,33 +164,23 @@ class ContentDetector {
 class UIManager {
   constructor() {
     this.activePopups = new Set();
-    this.stylesInjected = false;
-    this.highlightedElements = new WeakMap(); // Track elements and their click handlers
-    this.injectStyles();
+    this.highlightedElements = new WeakMap();
+    this.shadowHost = null;
+    this.shadowRoot = null;
+    this.initShadowDOM();
   }
 
-  injectStyles() {
-    if (this.stylesInjected) return;
+  initShadowDOM() {
+    this.shadowHost = document.createElement('div');
+    this.shadowHost.id = 'typeaware-shadow-host';
+    document.body.appendChild(this.shadowHost);
+    this.shadowRoot = this.shadowHost.attachShadow({ mode: 'open' });
 
-    const style = document.createElement("style");
-    style.setAttribute("data-typeaware", "injected-styles");
-    style.textContent = `
-      .typeaware-highlight {
-        position: relative;
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.15));
-        border-radius: 4px;
-        border: 2px solid rgba(239, 68, 68, 0.5);
-        padding: 2px 4px;
-        margin: 0 1px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
-      }
-
-      .typeaware-highlight:hover {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.25));
-        border-color: rgba(239, 68, 68, 0.7);
-        box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+    const styleSheet = new CSSStyleSheet();
+    styleSheet.replaceSync(`
+      :host {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
       }
 
       .typeaware-popup {
@@ -201,8 +191,6 @@ class UIManager {
         border: 2px solid #dc2626;
         z-index: 999999;
         max-width: 350px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 14px;
         opacity: 0;
         transform: translateY(-10px) scale(0.95);
         transition: all 0.2s ease;
@@ -285,13 +273,11 @@ class UIManager {
       }
 
       .typeaware-fade-out {
-        opacity: 0 !important;
-        transform: translateY(-10px) scale(0.95) !important;
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
       }
-    `;
-
-    document.head.appendChild(style);
-    this.stylesInjected = true;
+    `);
+    this.shadowRoot.adoptedStyleSheets = [styleSheet];
   }
 
   highlightElement(element, detection) {
@@ -301,7 +287,6 @@ class UIManager {
     element.setAttribute("data-typeaware-category", detection.category);
     element.setAttribute("data-typeaware-severity", detection.severity);
 
-    // Create and store click handler for cleanup
     const clickHandler = (e) => {
       e.stopPropagation();
       this.showSuggestionPopup(element, detection);
@@ -318,7 +303,6 @@ class UIManager {
     element.removeAttribute("data-typeaware-category");
     element.removeAttribute("data-typeaware-severity");
 
-    // Remove event listener if it exists
     const clickHandler = this.highlightedElements.get(element);
     if (clickHandler) {
       element.removeEventListener("click", clickHandler);
@@ -338,12 +322,11 @@ class UIManager {
     const rect = element.getBoundingClientRect();
     const popup = this.createPopup(detection);
 
-    // Position popup with viewport awareness
     const position = this.calculatePopupPosition(rect, popup);
     popup.style.left = `${position.left}px`;
     popup.style.top = `${position.top}px`;
 
-    document.body.appendChild(popup);
+    this.shadowRoot.appendChild(popup);
 
     setTimeout(() => popup.classList.add("visible"), 10);
     setTimeout(() => this.hidePopup(popup), config.UI.POPUP_FADE_DELAY);
@@ -352,28 +335,23 @@ class UIManager {
   }
 
   calculatePopupPosition(elementRect, popup) {
-    const popupWidth = 350; // max-width from CSS
-    const popupHeight = 200; // estimated height
+    const popupWidth = 350;
+    const popupHeight = 200;
     const padding = 10;
 
     let left = elementRect.left + window.scrollX;
     let top = elementRect.bottom + window.scrollY + 5;
 
-    // Check right edge overflow
     if (left + popupWidth > window.innerWidth + window.scrollX - padding) {
       left = window.innerWidth + window.scrollX - popupWidth - padding;
     }
 
-    // Check left edge overflow
     if (left < window.scrollX + padding) {
       left = window.scrollX + padding;
     }
 
-    // Check bottom edge overflow - flip to top if needed
     if (top + popupHeight > window.innerHeight + window.scrollY - padding) {
       top = elementRect.top + window.scrollY - popupHeight - 5;
-      
-      // If still overflows at top, position at bottom with scroll
       if (top < window.scrollY + padding) {
         top = elementRect.bottom + window.scrollY + 5;
       }
@@ -386,13 +364,11 @@ class UIManager {
     const popup = document.createElement("div");
     popup.className = "typeaware-popup";
 
-    // Create header - safe DOM creation
     const header = document.createElement("div");
     header.className = "typeaware-popup-header";
     header.textContent = `⚠️ ${this.capitalizeFirst(detection.category)} Detected`;
     popup.appendChild(header);
 
-    // Create content - safe DOM creation
     const content = document.createElement("div");
     content.className = "typeaware-popup-content";
 
@@ -402,7 +378,6 @@ class UIManager {
     explanation.textContent = detection.explanation || "This content may be harmful or inappropriate.";
     content.appendChild(explanation);
 
-    // Add suggestion if present - safe DOM creation
     if (detection.suggestion) {
       const suggestion = document.createElement("div");
       suggestion.className = "typeaware-popup-suggestion";
@@ -412,14 +387,13 @@ class UIManager {
 
     popup.appendChild(content);
 
-    // Create actions - safe DOM creation
     const actions = document.createElement("div");
     actions.className = "typeaware-popup-actions";
 
     const dismissBtn = document.createElement("button");
     dismissBtn.className = "typeaware-btn typeaware-btn-secondary";
     dismissBtn.textContent = "Dismiss";
-    dismissBtn.onclick = () => popup.remove();
+    dismissBtn.onclick = () => this.hidePopup(popup);
     actions.appendChild(dismissBtn);
 
     const learnMoreBtn = document.createElement("button");

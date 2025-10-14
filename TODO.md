@@ -1,39 +1,28 @@
-# TypeAware Extension Memory Management & Cleanup
+# Extension CSS and Functionality Issues - Fix Plan
 
-## Current Issues
-- MutationObserver never disconnected
-- Event listeners not removed from highlighted elements
-- Active popups not cleaned up on page unload
-- Debounced timers not cleared
-- No page unload handlers
-- Background script resource cleanup missing
+## Issues Identified
+1. **Content Script Module Import Error**: `content.js` uses `await import('./utils/storageSchema.js')` which fails in Manifest V3 content scripts
+2. **CSS Loading Issue**: CSS may not load properly due to content script failure
+3. **Extension Not Working**: Core functionality broken due to import errors
 
-## Tasks
-- [ ] Add MutationObserver cleanup in content.js
-- [ ] Add event listener cleanup for highlighted elements
-- [ ] Add popup cleanup on page unload
-- [ ] Add timer cleanup mechanisms
-- [ ] Add page unload event handlers
-- [ ] Enhance background script cleanup
-- [ ] Add memory monitoring utilities
-- [ ] Test cleanup functionality
+## Planned Fixes
 
-## Implementation Plan
-1. Content Script Cleanup
-   - Disconnect MutationObserver on page unload
-   - Remove event listeners from processed elements
-   - Clear active popups
-   - Clear debounced timers
+### 1. Fix Content Script Module Imports
+- [ ] Inline `storageSchema.js` functionality directly into `content.js`
+- [ ] Remove ES module imports from content script
+- [ ] Ensure all dependencies are bundled properly
 
-2. Background Script Cleanup
-   - Add cleanup for alarms
-   - Add cleanup for storage listeners
-   - Add memory monitoring
+### 2. Verify CSS Loading
+- [ ] Ensure `content.css` is properly referenced in manifest
+- [ ] Test CSS injection and dynamic styles
+- [ ] Verify CSS classes match JavaScript usage
 
-3. Popup Cleanup
-   - Clear data on popup close
-   - Remove event listeners
+### 3. Build and Test Extension
+- [ ] Run build process to generate proper dist files
+- [ ] Test extension loading in Chrome
+- [ ] Verify content script execution and CSS application
 
-4. Storage Cleanup
-   - Enhanced periodic cleanup
-   - Memory usage monitoring
+### 4. Code Quality Improvements
+- [ ] Review and improve error handling
+- [ ] Add proper logging for debugging
+- [ ] Optimize performance and memory usage

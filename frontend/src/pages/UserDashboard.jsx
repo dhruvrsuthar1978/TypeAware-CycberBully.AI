@@ -28,6 +28,14 @@ const UserDashboard = () => {
   const [userAbuseHistory, setUserAbuseHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTipIndex, setSelectedTipIndex] = useState(0);
+  const [extensionStats, setExtensionStats] = useState({
+    extensionActive: false,
+    extensionVersion: null,
+    lastPing: null,
+    extensionReports: 0,
+    extensionSettings: {},
+    extensionActivity: []
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -63,6 +71,26 @@ const UserDashboard = () => {
         if (reportsResponse.ok) {
           const reportsData = await reportsResponse.json();
           setUserAbuseHistory(reportsData.reports || []);
+        }
+
+        // Fetch extension stats
+        const extensionStatsResponse = await fetch('http://localhost:5000/api/extension/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'x-user-uuid': user?.uuid || 'unknown'
+          }
+        });
+
+        if (extensionStatsResponse.ok) {
+          const extensionData = await extensionStatsResponse.json();
+          setExtensionStats({
+            extensionActive: extensionData.extensionActive || false,
+            extensionVersion: extensionData.extensionVersion || null,
+            lastPing: extensionData.lastPing ? new Date(extensionData.lastPing) : null,
+            extensionReports: extensionData.extensionReports || 0,
+            extensionSettings: extensionData.extensionSettings || {},
+            extensionActivity: extensionData.extensionActivity || []
+          });
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -178,7 +206,7 @@ const UserDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Reports Submitted</p>
-                  <p className="text-3xl font-bold text-foreground mb-1">{userStats.reportsSubmitted}</p>
+                  <p className="text-3xl font-bold text-foreground mb-1">{userStats.reportsSubmitted + extensionStats.extensionReports}</p>
                   <p className="text-xs text-muted-foreground">Helping keep community safe</p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-gradient-security flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -213,11 +241,18 @@ const UserDashboard = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-foreground text-lg">Extension Status</h3>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-xs font-medium text-green-600">Active</span>
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${extensionStats.extensionActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className={`text-xs font-medium ${extensionStats.extensionActive ? 'text-green-600' : 'text-red-600'}`}>
+                    {extensionStats.extensionActive ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">Browser extension is protecting you in real-time</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {extensionStats.extensionActive
+                  ? `Browser extension v${extensionStats.extensionVersion} is protecting you in real-time`
+                  : 'Browser extension is not active. Install and enable it for real-time protection.'
+                }
+              </p>
               <Button variant="outline" size="sm" className="w-full hover-scale" onClick={() => navigate('/extension')}>
                 <Settings className="h-4 w-4 mr-2" />
                 Configure Extension
@@ -379,8 +414,8 @@ const UserDashboard = () => {
                 </Button>
               </div>
               <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                {userAbuseHistory.slice(0, 10).map((report) => (
-                  <div key={report.id} className="group relative">
+                {[...userAbuseHistory, ...extensionStats.extensionActivity].slice(0, 10).map((report, index) => (
+                  <div key={report.id || `extension-${index}`} className="group relative">
                     <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-10 rounded-xl transition-opacity"></div>
                     <div className="relative flex items-start space-x-3 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-smooth border border-transparent hover:border-primary/20">
                       <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md">
@@ -388,7 +423,7 @@ const UserDashboard = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-semibold text-foreground">{report.platform} Report</p>
+                          <p className="text-sm font-semibold text-foreground">{report.platform || 'Extension'} Report</p>
                           <span className={`text-xs font-medium px-3 py-1 rounded-full ${
                             report.status === 'Resolved' ? 'bg-security/20 text-security' :
                             report.status === 'Pending' ? 'bg-warning/20 text-warning' :
@@ -527,10 +562,10 @@ const UserDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {userAbuseHistory.map((report) => (
-                    <tr key={report.id} className="border-b border-border/50 hover:bg-primary/5 transition-smooth cursor-pointer group" onClick={() => alert(`Original: ${report.content}\nReason: ${report.reason}`)}>
+                  {[...userAbuseHistory, ...extensionStats.extensionActivity].map((report, index) => (
+                    <tr key={report.id || `extension-${index}`} className="border-b border-border/50 hover:bg-primary/5 transition-smooth cursor-pointer group" onClick={() => alert(`Original: ${report.content}\nReason: ${report.reason}`)}>
                       <td className="py-4 px-4">
-                        <span className="font-medium text-foreground group-hover:text-primary transition-colors">{report.platform}</span>
+                        <span className="font-medium text-foreground group-hover:text-primary transition-colors">{report.platform || 'Extension'}</span>
                       </td>
                       <td className="py-4 px-4 max-w-xs">
                         <p className="text-sm text-muted-foreground line-clamp-2">

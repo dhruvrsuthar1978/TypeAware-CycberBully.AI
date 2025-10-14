@@ -71,10 +71,7 @@ const Popup = () => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
       
       {/* Animated Dots Pattern */}
-      <div className="absolute inset-0 opacity-20" style={{
-        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)',
-        backgroundSize: '20px 20px'
-      }}></div>
+      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.3)_1px,transparent_1px)] bg-[length:20px_20px]"></div>
 
       <div className="relative p-4 h-full">
         {/* Header */}
@@ -87,9 +84,7 @@ const Popup = () => {
             <h1 className="text-xl font-bold text-white">TypeAware</h1>
           </div>
           <div className="flex items-center space-x-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${stats.isEnabled ? 'bg-green-400' : 'bg-red-400'} shadow-lg`} style={{
-              boxShadow: stats.isEnabled ? '0 0 10px rgba(74, 222, 128, 0.8)' : '0 0 10px rgba(248, 113, 113, 0.8)'
-            }}></div>
+            <div className={`w-2.5 h-2.5 rounded-full ${stats.isEnabled ? 'bg-green-400' : 'bg-red-400'} shadow-lg ${stats.isEnabled ? 'shadow-green-400/80' : 'shadow-red-400/80'}`}></div>
             <button
               onClick={toggleExtension}
               className={`px-4 py-1.5 rounded-full text-xs font-bold ${
@@ -129,7 +124,7 @@ const Popup = () => {
             Recent Detections
           </h3>
           {recentDetections.length > 0 ? (
-            <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+            <div className="space-y-2 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-white/10 scrollbar-thumb-rounded-full">
               {recentDetections.map((detection, index) => (
                 <div key={index} className="bg-red-500/30 backdrop-blur-sm border border-red-400/50 rounded-xl p-2.5 hover:bg-red-500/40 transition-colors">
                   <div className="flex items-center justify-between mb-1">
@@ -169,23 +164,6 @@ const Popup = () => {
           </button>
         </div>
       </div>
-
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.3);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.5);
-        }
-      `}</style>
     </div>
   );
 };
