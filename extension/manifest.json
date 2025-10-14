@@ -4,18 +4,19 @@
   "version": "1.0.0",
   "description": "AI-powered content moderation for safer online spaces",
   "permissions": [
-    "activeTab",
     "storage",
     "scripting",
-    "alarms"
+    "activeTab"
   ],
   "host_permissions": [
     "http://localhost:5000/*",
     "https://*.twitter.com/*",
+    "https://*.x.com/*",
     "https://*.youtube.com/*",
     "https://*.reddit.com/*",
     "https://*.facebook.com/*",
-    "https://*.instagram.com/*"
+    "https://*.instagram.com/*",
+    "https://*.tiktok.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
@@ -42,13 +43,15 @@
     {
       "matches": [
         "https://*.twitter.com/*",
+        "https://*.x.com/*",
         "https://*.youtube.com/*",
         "https://*.reddit.com/*",
         "https://*.facebook.com/*",
         "https://*.instagram.com/*"
       ],
       "js": ["content.js"],
-      "css": ["content.css"]
+      "css": ["content.css"],
+      "run_at": "document_start"
     }
   ]
 }

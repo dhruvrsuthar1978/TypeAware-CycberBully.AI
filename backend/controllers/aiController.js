@@ -43,7 +43,14 @@ class AIController {
         toxicity_score: analysisResult.risk_score / 100, // Normalize 0-100 to 0-1
         explanation: `Risk level: ${analysisResult.risk_level}. ${analysisResult.detections?.length || 0} detections found.`,
         suggestion: analysisResult.suggestions?.[0] || 'No suggestion available',
-        detailed_analysis: analysisResult
+        detailed_analysis: analysisResult,
+        // Add missing fields that tests expect
+        is_abusive: analysisResult.is_abusive,
+        risk_score: analysisResult.risk_score,
+        risk_level: analysisResult.risk_level,
+        categories: analysisResult.categories,
+        detections: analysisResult.detections,
+        suggestions: analysisResult.suggestions
       };
 
       res.json(createResponse('Content analyzed successfully', transformedResult));

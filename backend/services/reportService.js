@@ -115,6 +115,9 @@ class ReportService {
     // ----------------------------------------------------------------------
 
     generateContentHash(content, browserUUID) {
+        if (typeof content !== 'string') {
+            content = String(content || '');
+        }
         return crypto.createHash('sha256')
             .update(content + browserUUID)
             .digest('hex');

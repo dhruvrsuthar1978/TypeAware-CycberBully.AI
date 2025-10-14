@@ -49,22 +49,34 @@ class ExtensionController {
         return res.status(400).json(createErrorResponse('Validation Error', 'User UUID is required'));
       }
 
-      // Create report data
+      // Create report data in the format expected by reportService
       const reportData = {
-        content,
-        flagReason,
-        platform,
+        browserUUID: reporterUuid, // Map reporterUuid to browserUUID as expected by service
+        userId: null, // Extension reports don't have authenticated users
+        content: {
+          original: content,
+          flaggedTerms: [], // Extension doesn't provide flagged terms
+          severity: 'medium' // Default severity
+        },
         context: {
-          ...context,
+          platform: platform || 'web',
           url,
+          pageTitle: context?.pageTitle || '',
+          elementType: context?.elementType || 'other'
+        },
+        classification: {
+          category: flagReason || 'other',
+          confidence: detectionConfidence || 0.8,
+          detectionMethod: 'user_report'
+        },
+        metadata: {
+          userAgent: req.get('User-Agent'),
+          timestamp: timestamp ? new Date(timestamp) : new Date(),
           extensionId,
           extensionVersion,
           detectionConfidence,
           submittedVia: 'extension'
-        },
-        flaggedUserUuid,
-        reporterUuid,
-        timestamp: timestamp ? new Date(timestamp) : new Date()
+        }
       };
 
       // Submit report through service

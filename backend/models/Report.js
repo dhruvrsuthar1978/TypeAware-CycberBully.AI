@@ -33,7 +33,12 @@ const reportSchema = new mongoose.Schema({
       type: [flaggedTermSchema],
       default: []
     },
-    wordCount: { type: Number, default: 0 }
+    wordCount: { type: Number, default: 0 },
+    severity: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'critical'],
+      default: 'low'
+    }
   },
   context: {
     platform: {

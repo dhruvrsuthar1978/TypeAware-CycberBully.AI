@@ -1,0 +1,14 @@
+{
+  "name": "typeaware-extension",
+  "version": "1.0.0",
+  "description": "TypeAware content moderation extension",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Development mode'",
+    "build": "echo 'No build required - copy files to dist folder'",
+    "test": "echo 'Testing...'"
+  },
+  "keywords": ["content-moderation", "safety", "chrome-extension"],
+  "author": "TypeAware",
+  "license": "MIT"
+}

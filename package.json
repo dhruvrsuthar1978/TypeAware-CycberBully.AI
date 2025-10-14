@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/dhruvrsuthar1978/TypeAware-AI#readme",
   "dependencies": {
-    "joi": "^18.0.1"
+    "archiver": "^7.0.1",
+    "joi": "^18.0.1",
+    "sharp": "^0.34.4"
   }
 }
