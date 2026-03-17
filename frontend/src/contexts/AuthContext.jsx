@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/utils/config';
 
 const AuthContext = createContext();
 
@@ -13,8 +14,6 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const API_BASE_URL = 'http://localhost:5000/api';
 
   useEffect(() => {
     // Check for existing auth in localStorage on mount
@@ -46,7 +45,7 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         return { success: true };
       } else {
-        return { success: false, error: data.message || 'Login failed' };
+        return { success: false, error: data.detail || data.message || 'Login failed' };
       }
     } catch (error) {
       return { success: false, error: 'Network error' };
@@ -75,7 +74,7 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         return { success: true };
       } else {
-        return { success: false, error: data.message || 'Signup failed' };
+        return { success: false, error: data.detail || data.message || 'Signup failed' };
       }
     } catch (error) {
       return { success: false, error: 'Network error' };

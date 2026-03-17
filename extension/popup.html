@@ -5,256 +5,866 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TypeAware</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --background: #070c16;
+      --foreground: #e8f0f8;
+      --card: #0d1526;
+      --secondary: #111c30;
+      --muted: #0f182a;
+      --muted-foreground: #5a7a9a;
+      --border: #1e2d47;
+      --primary: #3a9efb;
+      --accent: #0bc8d4;
+      --security: #14b87a;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 10px;
+      --gradient-primary: linear-gradient(135deg, #3a9efb, #0bc8d4);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
-      width: 400px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #fff;
+      width: 360px;
+      min-height: 520px;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      overflow-x: hidden;
+      font-size: 13px;
     }
 
-    .container {
-      padding: 20px;
-      min-height: 500px;
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Background Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-layer::before {
+      content: '';
+      position: absolute;
+      top: -40%; left: -20%;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(58,158,251,0.14) 0%, transparent 70%);
+      animation: orb 14s ease-in-out infinite;
+    }
+    .bg-layer::after {
+      content: '';
+      position: absolute;
+      bottom: -30%; right: -10%;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(11,200,212,0.10) 0%, transparent 70%);
+      animation: orb 18s ease-in-out infinite reverse;
+    }
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(58,158,251,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(58,158,251,0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    @keyframes orb {
+      0%,100% { transform: translate(0,0) scale(1); }
+      40%      { transform: translate(18px,-12px) scale(1.08); }
+      70%      { transform: translate(-12px,16px) scale(0.94); }
+    }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Shell Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .popup {
+      position: relative;
+      z-index: 1;
       display: flex;
       flex-direction: column;
+      min-height: 520px;
     }
 
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Header Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
     .header {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-
-    .logo {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
-
-    .header h1 {
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .header p {
-      font-size: 12px;
-      opacity: 0.9;
-    }
-
-    .toggle-section {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 12px 16px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      backdrop-filter: blur(10px);
+      justify-content: space-between;
+      padding: 16px 18px 14px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
     }
-
-    .toggle-label {
-      font-weight: 600;
-      font-size: 14px;
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-
-    .toggle-btn {
-      padding: 6px 16px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.3s;
+    .logo-icon {
+      position: relative;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
     }
-
-    .toggle-btn.active {
-      background: #10b981;
-      color: white;
+    .logo-icon svg {
+      filter: drop-shadow(0 0 8px rgba(58,158,251,0.55));
+      animation: shield-pulse 3s ease-in-out infinite;
     }
-
-    .toggle-btn.inactive {
-      background: #ef4444;
-      color: white;
+    @keyframes shield-pulse {
+      0%,100% { filter: drop-shadow(0 0 6px rgba(58,158,251,0.45)); }
+      50%      { filter: drop-shadow(0 0 16px rgba(58,158,251,0.8)); }
     }
-
-    .toggle-btn:hover {
-      transform: scale(1.05);
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: rgba(255, 255, 255, 0.15);
-      padding: 15px;
-      border-radius: 12px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .stat-value {
-      font-size: 28px;
+    .logo-name {
+      font-size: 16px;
       font-weight: 700;
-      margin-bottom: 5px;
+      background: linear-gradient(135deg, #93C5FD, #3A9EFB, #0BC8D4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.3px;
+    }
+    .logo-sub {
+      display: block;
+      font-size: 9.5px;
+      color: var(--muted-foreground);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 1px;
     }
 
-    .stat-label {
-      font-size: 12px;
-      opacity: 0.85;
-    }
-
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 10px;
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Toggle Pill Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .toggle-pill {
       display: flex;
       align-items: center;
       gap: 6px;
-    }
-
-    .detections-box {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      padding: 12px;
-      max-height: 180px;
-      overflow-y: auto;
-      margin-bottom: 20px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .detection-item {
-      background: rgba(239, 68, 68, 0.2);
-      border-left: 3px solid #ef4444;
-      padding: 8px;
-      margin-bottom: 8px;
-      border-radius: 5px;
+      padding: 5px 12px;
+      border-radius: 100px;
       font-size: 12px;
-    }
-
-    .detection-type {
       font-weight: 600;
-      color: #fca5a5;
-    }
-
-    .detection-time {
-      font-size: 11px;
-      opacity: 0.8;
-      margin-top: 3px;
-    }
-
-    .no-detections {
-      text-align: center;
-      padding: 20px 10px;
-      opacity: 0.7;
-      font-size: 13px;
-    }
-
-    .button-group {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: auto;
-    }
-
-    .btn {
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 13px;
       cursor: pointer;
-      transition: all 0.3s;
+      border: 1px solid;
+      transition: all 0.22s;
+      font-family: inherit;
+      letter-spacing: 0.1px;
+    }
+    .toggle-pill.active {
+      background: rgba(20,184,122,0.12);
+      border-color: rgba(20,184,122,0.4);
+      color: var(--security);
+    }
+    .toggle-pill.inactive {
+      background: rgba(239,68,68,0.10);
+      border-color: rgba(239,68,68,0.35);
+      color: var(--danger);
+    }
+    .toggle-pill:hover { transform: scale(1.04); }
+    .t-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+    .toggle-pill.active .t-dot {
+      background: var(--security);
+      box-shadow: 0 0 7px rgba(20,184,122,0.7);
+      animation: dot-blink 2s ease-in-out infinite;
+    }
+    .toggle-pill.inactive .t-dot { background: var(--danger); }
+    @keyframes dot-blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.5; }
+    }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Tab Nav Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .tab-nav {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      padding: 0 18px;
+      gap: 2px;
+    }
+    .tab-btn {
+      position: relative;
+      flex: 1;
+      padding: 10px 4px;
+      background: none;
+      border: none;
+      color: var(--muted-foreground);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 5px;
     }
+    .tab-btn.active {
+      color: var(--primary);
+    }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 12%; right: 12%;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 2px 2px 0 0;
+    }
+    .tab-btn:hover:not(.active) { color: var(--foreground); }
+    .tab-badge {
+      background: var(--danger);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 100px;
+      min-width: 16px;
+      text-align: center;
+      line-height: 14px;
+    }
+    .tab-badge.hidden { display: none; }
 
-    .btn-primary {
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Panels Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .panels { flex: 1; overflow: hidden; }
+    .panel { display: none; padding: 14px 18px; flex-direction: column; gap: 12px; }
+    .panel.active { display: flex; }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Stats Grid Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(58,158,251,0.4), transparent);
+    }
+    .stat-card:hover {
+      border-color: rgba(58,158,251,0.3);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    .stat-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .stat-icon-wrap {
+      width: 26px; height: 26px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stat-icon-wrap.blue  { background: rgba(58,158,251,0.15); color: var(--primary); }
+    .stat-icon-wrap.red   { background: rgba(239,68,68,0.13);  color: var(--danger);  }
+    .stat-label-top {
+      font-size: 10px;
+      color: var(--muted-foreground);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .stat-value.blue { color: var(--primary); }
+    .stat-value.red  { color: var(--danger);  }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Protection Bar Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .prot-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .prot-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(20,184,122,0.5), transparent);
+    }
+    .prot-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .prot-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted-foreground);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .prot-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--security);
+    }
+    .prot-track {
+      height: 5px;
+      background: var(--secondary);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-bottom: 7px;
+    }
+    .prot-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, var(--security), #34D399);
+      box-shadow: 0 0 8px rgba(20,184,122,0.45);
+      transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+      width: 92%;
+    }
+    .prot-status {
+      font-size: 11px;
+      color: var(--muted-foreground);
+    }
+    .prot-status.safe   { color: var(--security); }
+    .prot-status.warn   { color: var(--warning); }
+    .prot-status.danger { color: var(--danger); }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Action Buttons Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.22s;
+      font-family: inherit;
+      border: 1px solid;
+    }
+    .action-btn:hover { transform: translateY(-2px); }
+    .action-btn:active { transform: translateY(0); }
+    .action-btn.primary {
+      background: var(--gradient-primary);
+      border-color: transparent;
+      color: #ffffff;
+    }
+    .action-btn.primary:hover {
+      box-shadow: 0 4px 18px rgba(58,158,251,0.22);
+    }
+    .action-btn.secondary {
+      background: var(--secondary);
+      border-color: var(--border);
+      color: var(--muted-foreground);
+    }
+    .action-btn.secondary:hover {
+      border-color: rgba(58,158,251,0.3);
+      color: var(--foreground);
     }
 
-    .btn-primary:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-2px);
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Detections Panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .det-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .chips {
+      display: flex;
+      gap: 5px;
+    }
+    .chip {
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted-foreground);
+      transition: all 0.18s;
+      font-family: inherit;
+    }
+    .chip.active {
+      background: rgba(58, 158, 251, 0.14);
+      border-color: rgba(58, 158, 251, 0.35);
+      color: #8ec7ff;
+    }
+    .chip:hover:not(.active) { color: var(--foreground); border-color: rgba(255,255,255,0.15); }
+    .clear-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(239,68,68,0.25);
+      background: rgba(239,68,68,0.08);
+      color: var(--danger);
+      transition: all 0.18s;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+    .clear-btn:hover {
+      background: rgba(239,68,68,0.16);
+      border-color: rgba(239,68,68,0.45);
     }
 
-    .btn-secondary {
-      background: rgba(239, 68, 68, 0.2);
-      color: white;
-      border: 1px solid rgba(239, 68, 68, 0.3);
+    .det-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 310px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .det-list::-webkit-scrollbar { width: 3px; }
+    .det-list::-webkit-scrollbar-track { background: transparent; }
+    .det-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .det-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      transition: border-color 0.15s;
+      cursor: default;
+    }
+    .det-item:hover { border-color: rgba(58,158,251,0.25); }
+    .det-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .dot-high   { background: var(--danger);   box-shadow: 0 0 5px rgba(239,68,68,0.6); }
+    .dot-medium { background: var(--warning);  box-shadow: 0 0 5px rgba(245,158,11,0.6); }
+    .dot-low    { background: var(--primary);  box-shadow: 0 0 5px rgba(58,158,251,0.5); }
+    .det-info { flex: 1; min-width: 0; }
+    .det-type {
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .det-meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: var(--muted-foreground);
+    }
+    .det-meta-sep {
+      width: 2px; height: 2px;
+      background: var(--muted-foreground);
+      border-radius: 50%;
+    }
+    .det-sev {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 100px;
+    }
+    .sev-high   { background: rgba(239,68,68,0.14); color: var(--danger); }
+    .sev-medium { background: rgba(245,158,11,0.14); color: var(--warning); }
+    .sev-low    { background: rgba(58,158,251,0.14); color: var(--primary); }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 36px 16px;
+      gap: 10px;
+      color: var(--muted-foreground);
+      text-align: center;
+    }
+    .empty-state svg { opacity: 0.35; }
+    .empty-state p { font-size: 12px; line-height: 1.5; }
+
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Settings Panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .settings-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .settings-section-title {
+      font-size: 9.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted-foreground);
+      padding: 10px 14px 6px;
     }
 
-    .btn-secondary:hover {
-      background: rgba(239, 68, 68, 0.3);
-      transform: translateY(-2px);
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 14px;
+      border-top: 1px solid var(--border);
+    }
+    .setting-row:first-of-type { border-top: none; }
+    .setting-text {}
+    .setting-name {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--foreground);
+      display: block;
+      margin-bottom: 1px;
+    }
+    .setting-desc {
+      font-size: 10.5px;
+      color: var(--muted-foreground);
+      display: block;
     }
 
-    ::-webkit-scrollbar {
-      width: 5px;
+    /* Toggle switch */
+    .sw { position: relative; display: inline-block; width: 38px; height: 21px; flex-shrink: 0; cursor: pointer; }
+    .sw input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .sw-track {
+      position: absolute; inset: 0;
+      background: var(--secondary);
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      transition: all 0.25s;
+    }
+    .sw-track::before {
+      content: '';
+      position: absolute;
+      width: 15px; height: 15px;
+      left: 2px; top: 2px;
+      border-radius: 50%;
+      background: var(--muted-foreground);
+      transition: all 0.25s;
+    }
+    .sw input:checked + .sw-track { background: var(--primary); border-color: var(--primary); }
+    .sw input:checked + .sw-track::before { transform: translateX(17px); background: #fff; }
+
+    /* Sensitivity slider */
+    .sens-wrap {
+      padding: 10px 14px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .sens-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .sens-header .setting-name { margin: 0; }
+    .sens-current {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+      background: rgba(58,158,251,0.12);
+      border: 1px solid rgba(58,158,251,0.25);
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .range-label { font-size: 10px; color: var(--muted-foreground); font-weight: 500; white-space: nowrap; }
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 4px;
+      background: var(--secondary);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 7px rgba(58,158,251,0.5);
+      cursor: pointer;
+    }
+    .sens-hint {
+      font-size: 10.5px;
+      color: var(--muted-foreground);
+      line-height: 1.4;
     }
 
-    ::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Footer Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      margin-top: auto;
     }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 3px;
+    .version { font-size: 10px; color: var(--muted-foreground); font-weight: 500; }
+    .footer-mid { font-size: 10px; color: var(--muted-foreground); }
+    .footer-link {
+      font-size: 10px;
+      color: var(--muted-foreground);
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+      transition: color 0.15s;
     }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.4);
-    }
+    .footer-link:hover { color: var(--primary); }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">🛡️</div>
-      <h1>TypeAware</h1>
-      <p>Content Moderation</p>
-    </div>
+  <div class="bg-layer"></div>
+  <div class="bg-grid"></div>
 
-    <div class="toggle-section">
-      <span class="toggle-label">Extension Status</span>
-      <button class="toggle-btn active" id="toggleBtn">ON</button>
-    </div>
+  <div class="popup">
 
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value" id="scanned">0</div>
-        <div class="stat-label">📊 Scanned</div>
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="30" height="34" viewBox="0 0 30 34" fill="none">
+            <path d="M15 1L2 7V18C2 25.7 7.9 32.9 15 34C22.1 32.9 28 25.7 28 18V7L15 1Z"
+              fill="url(#sg)" stroke="rgba(58,158,251,0.5)" stroke-width="1.2"/>
+            <path d="M10 17L13.5 20.5L20 14" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="sg" x1="2" y1="1" x2="28" y2="34" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#60A5FA"/>
+                <stop offset="100%" stop-color="#0BC8D4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div>
+          <span class="logo-name">TypeAware</span>
+          <span class="logo-sub">AI Content Guard</span>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value" id="threats">0</div>
-        <div class="stat-label">⚠️ Threats</div>
+      <button class="toggle-pill active" id="toggleBtn">
+        <span class="t-dot"></span>
+        <span id="toggleLabel">Active</span>
+      </button>
+    </header>
+
+    <!-- Tab Nav -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="detections">
+        Detections
+        <span class="tab-badge hidden" id="tabBadge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </nav>
+
+    <!-- Panels -->
+    <div class="panels">
+
+      <!-- Overview -->
+      <div class="panel active" id="panel-overview">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon-row">
+              <div class="stat-icon-wrap blue">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+              </div>
+              <span class="stat-label-top">Scanned</span>
+            </div>
+            <div class="stat-value blue" id="statScanned">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-row">
+              <div class="stat-icon-wrap red">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <span class="stat-label-top">Threats</span>
+            </div>
+            <div class="stat-value red" id="statThreats">0</div>
+          </div>
+        </div>
+
+        <div class="prot-card">
+          <div class="prot-header">
+            <span class="prot-label">Protection Score</span>
+            <span class="prot-value" id="protValue">100%</span>
+          </div>
+          <div class="prot-track">
+            <div class="prot-fill" id="protFill"></div>
+          </div>
+          <span class="prot-status safe" id="protStatus">All systems nominal</span>
+        </div>
+
+        <div class="action-grid">
+          <button class="action-btn primary" id="dashBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            Dashboard
+          </button>
+          <button class="action-btn secondary" id="analyseBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Analyse Page
+          </button>
+        </div>
       </div>
-    </div>
 
-    <div class="section-title">📋 Recent Detections</div>
-    <div class="detections-box" id="detectionsBox">
-      <div class="no-detections">No detections yet</div>
-    </div>
+      <!-- Detections -->
+      <div class="panel" id="panel-detections">
+        <div class="det-header">
+          <div class="chips">
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="high">High</button>
+            <button class="chip" data-filter="medium">Med</button>
+            <button class="chip" data-filter="low">Low</button>
+          </div>
+          <button class="clear-btn" id="clearBtn">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            Clear
+          </button>
+        </div>
+        <div class="det-list" id="detList">
+          <div class="empty-state">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" color="#14B87A">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+            <p>All clear Ã¢â‚¬â€ no threats detected<br>on this page</p>
+          </div>
+        </div>
+      </div>
 
-    <div class="button-group">
-      <button class="btn btn-primary" id="dashboardBtn">📊 Dashboard</button>
-      <button class="btn btn-secondary" id="clearBtn">🗑️ Clear</button>
-    </div>
-  </div>
+      <!-- Settings -->
+      <div class="panel" id="panel-settings">
+
+        <!-- Sensitivity -->
+        <div class="settings-section">
+          <div class="settings-section-title">Detection</div>
+          <div class="sens-wrap">
+            <div class="sens-header">
+              <span class="setting-name">Sensitivity</span>
+              <span class="sens-current" id="sensLabel">Medium</span>
+            </div>
+            <div class="range-row">
+              <span class="range-label">Low</span>
+              <input type="range" id="sensRange" min="1" max="3" step="1" value="2">
+              <span class="range-label">High</span>
+            </div>
+            <p class="sens-hint" id="sensHint">Detects harassment, hate speech, threats &amp; profanity.</p>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-text">
+              <span class="setting-name">Show Highlights</span>
+              <span class="setting-desc">Underline detected content on page</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="swHighlights" checked>
+              <span class="sw-track"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-text">
+              <span class="setting-name">AI Analysis</span>
+              <span class="setting-desc">Deeper AI-powered content analysis</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="swAI" checked>
+              <span class="sw-track"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-text">
+              <span class="setting-name">Block High-Risk Posts</span>
+              <span class="setting-desc">Prevent submitting severe harmful messages</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="swBlockHigh" checked>
+              <span class="sw-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Reporting -->
+        <div class="settings-section">
+          <div class="settings-section-title">Reporting</div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <span class="setting-name">Auto-Report</span>
+              <span class="setting-desc">Submit high-severity threats automatically</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="swAutoReport">
+              <span class="sw-track"></span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <span class="setting-name">Notifications</span>
+              <span class="setting-desc">Browser alerts for new threats</span>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="swNotify">
+              <span class="sw-track"></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /panels -->
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span class="version" id="versionEl">v2.0.0</span>
+      <span class="footer-mid" id="backendEl">Backend: checking...</span>
+      <button class="footer-link" id="reportIssueBtn">Report Issue</button>
+    </footer>
+
+  </div><!-- /popup -->
 
   <script src="popup.js"></script>
 </body>

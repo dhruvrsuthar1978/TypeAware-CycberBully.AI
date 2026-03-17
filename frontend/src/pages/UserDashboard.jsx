@@ -1,600 +1,447 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, Tooltip, Legend } from 'recharts';
-import { Shield, Eye, Flag, Calendar, AlertTriangle, CheckCircle, Clock, ExternalLink, Star, ThumbsUp, Lightbulb, Settings, Activity, TrendingUp, Zap, Download, FileText, Trash2 } from 'lucide-react';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ResponsiveContainer, Tooltip
+} from 'recharts';
+import {
+  Shield, Eye, Flag, AlertTriangle, CheckCircle, Clock,
+  Activity, TrendingUp, Settings, Lightbulb, ExternalLink,
+  Download, Trash2, FileText, Zap, Star
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { API_BASE_URL, getAuthToken } from '@/utils/config';
 
 const safetyTips = [
-  "Did you know? Cyberbullies often use sarcasm. Our AI is trained to detect sarcastic intent.",
-  "Tip: Use positive language to reduce misunderstandings online.",
-  "Remember: Reporting harmful content helps keep the community safe.",
-  "Stay aware: Our extension protects you in real-time across platforms."
+  'Cyberbullies often use sarcasm. Our AI is trained to detect sarcastic intent.',
+  'Use positive language to reduce misunderstandings online.',
+  'Reporting harmful content helps keep the community safe.',
+  'The extension protects you in real-time across all monitored platforms.',
 ];
 
+const CHART_COLORS = {
+  primary: 'hsl(213 94% 58%)',
+  accent:  'hsl(185 96% 42%)',
+  grid:    'hsl(216 34% 16%)',
+  muted:   'hsl(215 16% 52%)',
+};
+
+const monthlyData = [
+  { month: 'Jul', scanned: 2100, detected: 45 },
+  { month: 'Aug', scanned: 2400, detected: 52 },
+  { month: 'Sep', scanned: 2800, detected: 38 },
+  { month: 'Oct', scanned: 3200, detected: 41 },
+  { month: 'Nov', scanned: 2900, detected: 29 },
+  { month: 'Dec', scanned: 3100, detected: 33 },
+];
+
+const StatusIcon = ({ status }) => {
+  if (status === 'Resolved')     return <CheckCircle className="h-4 w-4 text-security" />;
+  if (status === 'Under Review') return <AlertTriangle className="h-4 w-4 text-primary" />;
+  return <Clock className="h-4 w-4 text-warning" />;
+};
+
+const StatusBadge = ({ status }) => {
+  const config = {
+    Resolved:      'badge-success',
+    Pending:       'badge-warning',
+    'Under Review': 'badge-primary',
+  };
+  return <span className={config[status] || 'badge-warning'}>{status}</span>;
+};
+
 const UserDashboard = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user }    = useAuth();
+  const navigate    = useNavigate();
+  const { toast }   = useToast();
+  const [tipIdx, setTipIdx]  = useState(0);
+  const [loading, setLoading] = useState(true);
   const [userStats, setUserStats] = useState({
-    messagesScanned: 0,
-    threatsDetected: 0,
-    reportsSubmitted: 0,
-    positivityScore: 98,
-    accountCreated: new Date()
+    messagesScanned: 0, threatsDetected: 0, reportsSubmitted: 0,
+    positivityScore: 98, accountCreated: new Date(),
   });
   const [userAbuseHistory, setUserAbuseHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTipIndex, setSelectedTipIndex] = useState(0);
-  const [extensionStats, setExtensionStats] = useState({
-    extensionActive: false,
-    extensionVersion: null,
-    lastPing: null,
-    extensionReports: 0,
-    extensionSettings: {},
-    extensionActivity: []
-  });
+  const [extensionActive, setExtensionActive]   = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+        const token = getAuthToken();
+        if (!token) { setLoading(false); return; }
 
-        // Fetch user analytics
-        const analyticsResponse = await fetch('http://localhost:5000/api/analytics/user', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const [analyticsRes, reportsRes] = await Promise.allSettled([
+          fetch(`${API_BASE_URL}/analytics/user`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE_URL}/reports/user`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        if (analyticsResponse.ok) {
-          const analyticsData = await analyticsResponse.json();
+        if (analyticsRes.status === 'fulfilled' && analyticsRes.value.ok) {
+          const d = await analyticsRes.value.json();
           setUserStats({
-            messagesScanned: analyticsData.messagesScanned || 0,
-            threatsDetected: analyticsData.threatsDetected || 0,
-            reportsSubmitted: analyticsData.reportsSubmitted || 0,
-            positivityScore: analyticsData.positivityScore || 98,
-            accountCreated: new Date(analyticsData.accountCreated || Date.now())
+            messagesScanned: d.messagesScanned || 0,
+            threatsDetected: d.threatsDetected || 0,
+            reportsSubmitted: d.reportsSubmitted || 0,
+            positivityScore: d.positivityScore || 98,
+            accountCreated: new Date(d.accountCreated || Date.now()),
           });
         }
-
-        // Fetch user reports
-        const reportsResponse = await fetch('http://localhost:5000/api/reports/user', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (reportsResponse.ok) {
-          const reportsData = await reportsResponse.json();
-          setUserAbuseHistory(reportsData.reports || []);
+        if (reportsRes.status === 'fulfilled' && reportsRes.value.ok) {
+          const d = await reportsRes.value.json();
+          setUserAbuseHistory(d.reports || []);
         }
-
-        // Fetch extension stats
-        const extensionStatsResponse = await fetch('http://localhost:5000/api/extension/stats', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'x-user-uuid': user?.uuid || 'unknown'
-          }
-        });
-
-        if (extensionStatsResponse.ok) {
-          const extensionData = await extensionStatsResponse.json();
-          setExtensionStats({
-            extensionActive: extensionData.extensionActive || false,
-            extensionVersion: extensionData.extensionVersion || null,
-            lastPing: extensionData.lastPing ? new Date(extensionData.lastPing) : null,
-            extensionReports: extensionData.extensionReports || 0,
-            extensionSettings: extensionData.extensionSettings || {},
-            extensionActivity: extensionData.extensionActivity || []
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
+      } catch (e) {
+        console.error(e);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserData();
-
-    // Rotate safety tips every 10 seconds
-    const tipInterval = setInterval(() => {
-      setSelectedTipIndex((prev) => (prev + 1) % safetyTips.length);
-    }, 10000);
-
-    return () => clearInterval(tipInterval);
+    fetchData();
+    const ti = setInterval(() => setTipIdx((p) => (p + 1) % safetyTips.length), 10000);
+    return () => clearInterval(ti);
   }, []);
 
-  const monthlyActivity = [
-    { month: 'Jul', scanned: 2100, detected: 45 },
-    { month: 'Aug', scanned: 2400, detected: 52 },
-    { month: 'Sep', scanned: 2800, detected: 38 },
-    { month: 'Oct', scanned: 3200, detected: 41 },
-    { month: 'Nov', scanned: 2900, detected: 29 },
-    { month: 'Dec', scanned: 3100, detected: 33 }
+  const handleClearHistory = async () => {
+    if (!window.confirm('Clear all report history? This cannot be undone.')) return;
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/reports/clear`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setUserAbuseHistory([]);
+        toast({ title: 'History cleared' });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to clear history' });
+    }
+  };
+
+  const handleExport = () => {
+    try {
+      const csv =
+        'Platform,Content,Reason,Status,Date\n' +
+        userAbuseHistory
+          .map((r) =>
+            [
+              r.platform || 'Extension',
+              (r.content || '').replace(/,/g, ' '),
+              r.reason,
+              r.status,
+              new Date(r.timestamp).toLocaleDateString(),
+            ].join(',')
+          )
+          .join('\n');
+      const a = Object.assign(document.createElement('a'), {
+        href: 'data:text/csv;charset=utf-8,' + encodeURI(csv),
+        download: 'abuse_history.csv',
+      });
+      a.click();
+      toast({ title: 'Exported', description: 'Saved as abuse_history.csv' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Export failed' });
+    }
+  };
+
+  const name = user?.name || user?.username || 'User';
+
+  /* ── KPI Cards ───────────────────────────────────────────── */
+  const kpis = [
+    {
+      label: 'Messages Scanned',
+      value: userStats.messagesScanned.toLocaleString(),
+      sub: `Since ${userStats.accountCreated.toLocaleDateString()}`,
+      icon: Eye,
+      color: 'text-primary',
+      bg: 'bg-primary/10',
+    },
+    {
+      label: 'Threats Detected',
+      value: userStats.threatsDetected,
+      sub: 'Potential harm prevented',
+      icon: AlertTriangle,
+      color: 'text-danger',
+      bg: 'bg-danger/10',
+    },
+    {
+      label: 'Reports Submitted',
+      value: userStats.reportsSubmitted,
+      sub: 'Helping keep community safe',
+      icon: Flag,
+      color: 'text-warning',
+      bg: 'bg-warning/10',
+    },
+    {
+      label: 'Positivity Score',
+      value: `${userStats.positivityScore}%`,
+      sub: 'Clean communication rate',
+      icon: Star,
+      color: 'text-security',
+      bg: 'bg-security/10',
+    },
   ];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Resolved': return 'text-security';
-      case 'Pending': return 'text-warning';
-      case 'Under Review': return 'text-primary';
-      default: return 'text-muted-foreground';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Resolved': return <CheckCircle className="h-4 w-4" />;
-      case 'Pending': return <Clock className="h-4 w-4" />;
-      case 'Under Review': return <AlertTriangle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section - Modern Aurora Design */}
-      <section className="relative overflow-hidden bg-gradient-aurora py-16 px-4 mb-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent"></div>
-        
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 bg-pattern-dots opacity-20"></div>
-        
-        {/* Floating Elements */}
-        <div className="absolute top-10 left-10 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
-        
-        <div className="relative max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative group">
-              <Shield className="h-12 w-12 text-white relative z-10 group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute inset-0 bg-white/40 rounded-full blur-xl animate-pulse-glow"></div>
+    <div className="flex-1 flex flex-col min-h-screen">
+      {/* Page header */}
+      <div className="page-header">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center">
+            <Shield className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-foreground">Dashboard</h1>
+            <p className="text-xs text-muted-foreground">Welcome back, {name}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-security px-2.5 py-1.5 rounded-md bg-security/10 border border-security/20">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-security opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-security" />
+            </span>
+            Protected
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
+            <FileText className="h-4 w-4 mr-1.5" />
+            All Reports
+          </Button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 p-6 space-y-6">
+
+        {/* KPI grid */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {kpis.map((k, i) => (
+            <div key={i} className="ta-card p-5">
+              <div className="flex items-start justify-between mb-3">
+                <p className="text-xs font-medium text-muted-foreground">{k.label}</p>
+                <div className={`w-8 h-8 rounded-lg ${k.bg} flex items-center justify-center`}>
+                  <k.icon className={`h-4 w-4 ${k.color}`} />
+                </div>
+              </div>
+              <p className={`text-3xl font-bold tab-nums ${k.color} mb-1`}>{k.value}</p>
+              <p className="text-xs text-muted-foreground">{k.sub}</p>
             </div>
-            <div>
-              <h1 className="text-4xl md:text-5xl font-display font-bold text-white animate-fade-in">
-                Welcome back, {user?.name}!
-              </h1>
-              <p className="text-white/90 text-lg mt-2">Your personal safety dashboard</p>
+          ))}
+        </div>
+
+        {/* Quick panels */}
+        <div className="grid md:grid-cols-3 gap-4">
+          {/* Extension status */}
+          <div className="ta-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Extension Status</h3>
+              <div className={`flex items-center gap-1.5 text-xs font-medium ${extensionActive ? 'text-security' : 'text-danger'}`}>
+                <span className={`inline-flex h-1.5 w-1.5 rounded-full ${extensionActive ? 'bg-security' : 'bg-danger'}`} />
+                {extensionActive ? 'Active' : 'Inactive'}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+              {extensionActive
+                ? 'Browser extension is protecting you in real-time.'
+                : 'Extension not detected. Install it for real-time protection.'}
+            </p>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/extension')}>
+              <Settings className="h-3.5 w-3.5 mr-1.5" />
+              Configure Extension
+            </Button>
+          </div>
+
+          {/* Quick settings */}
+          <div className="ta-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Quick Settings</h3>
+              <Zap className="h-4 w-4 text-primary" />
+            </div>
+            <div className="mb-4">
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Sensitivity Level</label>
+              <select
+                className="ta-input text-xs"
+                defaultValue="medium"
+                aria-label="Sensitivity Level"
+              >
+                <option value="low">Low — severe language only</option>
+                <option value="medium">Medium — balanced</option>
+                <option value="high">High — flags mild toxicity</option>
+              </select>
+            </div>
+            <Button size="sm" className="w-full" onClick={() => navigate('/settings')}>
+              Open Full Settings
+            </Button>
+          </div>
+
+          {/* Safety tips */}
+          <div className="ta-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Safety Tips</h3>
+              <Lightbulb className="h-4 w-4 text-warning" />
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-4 min-h-[3.5rem]">
+              {safetyTips[tipIdx]}
+            </p>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/learn-more')}>
+              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+              Learn More
+            </Button>
+          </div>
+        </div>
+
+        {/* Charts */}
+        <div className="grid lg:grid-cols-2 gap-4">
+          {/* Line chart */}
+          <div className="ta-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Detection Trends</h3>
+              <Badge variant="secondary" className="ml-auto text-xs">Last 6 months</Badge>
+            </div>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="month" stroke={CHART_COLORS.muted} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis stroke={CHART_COLORS.muted} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(220 44% 8%)',
+                      border: '1px solid hsl(216 34% 16%)',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                    }}
+                    labelStyle={{ color: 'hsl(210 38% 94%)' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="scanned"
+                    stroke={CHART_COLORS.muted}
+                    strokeWidth={2}
+                    dot={false}
+                    name="Scanned"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="detected"
+                    stroke={CHART_COLORS.primary}
+                    strokeWidth={2.5}
+                    dot={{ fill: CHART_COLORS.primary, r: 3 }}
+                    name="Detected"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Bar chart */}
+          <div className="ta-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="h-4 w-4 text-accent" />
+              <h3 className="text-sm font-semibold text-foreground">Monthly Scans</h3>
+            </div>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
+                  <XAxis dataKey="month" stroke={CHART_COLORS.muted} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis stroke={CHART_COLORS.muted} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(220 44% 8%)',
+                      border: '1px solid hsl(216 34% 16%)',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Bar dataKey="scanned" fill={CHART_COLORS.accent} radius={[3, 3, 0, 0]} name="Scanned" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
-      </section>
 
-      <div className="max-w-7xl mx-auto px-4 pb-8">
-        {/* At-a-Glance Metrics - Modern Glass Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="hover-lift-strong border-0 bg-gradient-card overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Messages Scanned</p>
-                  <p className="text-3xl font-bold text-foreground mb-1">{userStats.messagesScanned.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Since {userStats.accountCreated.toLocaleDateString()}</p>
-                </div>
-                <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Eye className="h-7 w-7 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift-strong border-0 bg-gradient-card overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-warning/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Threats Detected</p>
-                  <p className="text-3xl font-bold text-foreground mb-1">{userStats.threatsDetected}</p>
-                  <p className="text-xs text-muted-foreground">Potential harm prevented</p>
-                </div>
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <AlertTriangle className="h-7 w-7 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift-strong border-0 bg-gradient-card overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-security/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Reports Submitted</p>
-                  <p className="text-3xl font-bold text-foreground mb-1">{userStats.reportsSubmitted + extensionStats.extensionReports}</p>
-                  <p className="text-xs text-muted-foreground">Helping keep community safe</p>
-                </div>
-                <div className="w-14 h-14 rounded-2xl bg-gradient-security flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Flag className="h-7 w-7 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift-strong border-0 bg-gradient-card overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Positivity Score</p>
-                  <p className="text-3xl font-bold text-foreground mb-1">{userStats.positivityScore}%</p>
-                  <p className="text-xs text-muted-foreground">Clean communication rate</p>
-                </div>
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Star className="h-7 w-7 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Interactive Panels - Glass Morphism */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="glass-card-strong hover-lift border-white/30 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-security/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground text-lg">Extension Status</h3>
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full animate-pulse ${extensionStats.extensionActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <span className={`text-xs font-medium ${extensionStats.extensionActive ? 'text-green-600' : 'text-red-600'}`}>
-                    {extensionStats.extensionActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                {extensionStats.extensionActive
-                  ? `Browser extension v${extensionStats.extensionVersion} is protecting you in real-time`
-                  : 'Browser extension is not active. Install and enable it for real-time protection.'
-                }
-              </p>
-              <Button variant="outline" size="sm" className="w-full hover-scale" onClick={() => navigate('/extension')}>
-                <Settings className="h-4 w-4 mr-2" />
-                Configure Extension
+        {/* Abuse history table */}
+        <div className="ta-card overflow-hidden">
+          <div className="page-header">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Abuse History</h3>
+              <Badge variant="secondary" className="text-xs">{userAbuseHistory.length} records</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handleExport} className="text-xs gap-1.5">
+                <Download className="h-3.5 w-3.5" />
+                Export
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card-strong hover-lift border-white/30 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground text-lg">Quick Settings</h3>
-                <Settings className="h-5 w-5 text-primary" />
-              </div>
-              <div className="mb-4">
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">Sensitivity Level</label>
-                <select className="w-full border border-border rounded-lg p-2 bg-background/50 backdrop-blur-sm hover:border-primary transition-colors" defaultValue="medium" aria-label="Sensitivity Level">
-                  <option value="low">Low (only severe language)</option>
-                  <option value="medium">Medium (balanced)</option>
-                  <option value="high">High (flags mild toxicity)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full hover-scale"
-                  onClick={() => navigate('/settings')}
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  Open Settings
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full hover-scale bg-primary text-white hover:bg-primary/90 hover:text-white"
-                  onClick={() => {
-                    // Add settings update logic here
-                    toast({
-                      title: "Settings Updated",
-                      description: "Your settings have been saved successfully.",
-                      variant: "success"
-                    });
-                  }}
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Update Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card-strong hover-lift border-white/30 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-warning/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-foreground text-lg">Safety Tips</h3>
-                <Lightbulb className="h-5 w-5 text-warning" />
-              </div>
-              <p className="text-sm text-muted-foreground mb-4 min-h-[3rem]">{safetyTips[selectedTipIndex]}</p>
-              <Button variant="outline" size="sm" className="w-full hover-scale" onClick={() => {
-                console.log('Learn More button clicked, navigating to /learn-more');
-                navigate('/learn-more');
-              }}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Learn More
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearHistory}
+                className="text-xs gap-1.5 text-danger hover:bg-danger/10 hover:text-danger"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Clear
               </Button>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        {/* Data Visualization & History */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Threat Detection Trends Chart */}
-          <Card className="hover-lift border-0 bg-gradient-card shadow-elegant">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <TrendingUp className="h-6 w-6 text-primary" />
-                Threat Detection Trends
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyActivity}>
-                    <defs>
-                      <linearGradient id="colorScanned" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorDetected" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.5}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                    <XAxis 
-                      dataKey="month" 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '0.5rem',
-                        boxShadow: 'var(--shadow-card)'
-                      }}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="scanned" 
-                      stroke="hsl(var(--muted-foreground))" 
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--muted-foreground))', strokeWidth: 2, r: 4 }}
-                      name="Messages Scanned"
-                      fill="url(#colorScanned)"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="detected" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={3}
-                      dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 5 }}
-                      name="Threats Detected"
-                      fill="url(#colorDetected)"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity Feed */}
-          <Card className="hover-lift border-0 bg-gradient-card shadow-elegant">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Activity className="h-6 w-6 text-security" />
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-end mb-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="hover-scale"
-                  onClick={() => navigate('/reports')}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  View Full Report
-                </Button>
-              </div>
-              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                {[...userAbuseHistory, ...extensionStats.extensionActivity].slice(0, 10).map((report, index) => (
-                  <div key={report.id || `extension-${index}`} className="group relative">
-                    <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-10 rounded-xl transition-opacity"></div>
-                    <div className="relative flex items-start space-x-3 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-smooth border border-transparent hover:border-primary/20">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md">
-                        {report.status === 'Resolved' ? <CheckCircle className="h-5 w-5 text-white" /> : report.status === 'Pending' ? <Clock className="h-5 w-5 text-white" /> : <AlertTriangle className="h-5 w-5 text-white" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-semibold text-foreground">{report.platform || 'Extension'} Report</p>
-                          <span className={`text-xs font-medium px-3 py-1 rounded-full ${
-                            report.status === 'Resolved' ? 'bg-security/20 text-security' :
-                            report.status === 'Pending' ? 'bg-warning/20 text-warning' :
-                            'bg-primary/20 text-primary'
-                          }`}>
-                            {report.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                          {report.status === 'Resolved' ? 'Threat successfully addressed and removed' :
-                           report.status === 'Pending' ? 'Report submitted and under review' :
-                           'New report flagged for investigation'}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs bg-danger/20 text-danger px-2 py-1 rounded-full font-medium">
-                            {report.reason}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(report.timestamp).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Abuse History Table */}
-        <Card className="mt-8 hover-lift border-0 bg-gradient-card shadow-elegant">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xl">
-                <Shield className="h-6 w-6 text-primary" />
-                Abuse History
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="hover-scale text-danger hover:text-danger hover:bg-danger/10"
-                  onClick={async () => {
-                    if (window.confirm('Are you sure you want to clear your history? This action cannot be undone.')) {
-                      try {
-                        const token = localStorage.getItem('token');
-                        const response = await fetch('http://localhost:5000/api/reports/clear', {
-                          method: 'DELETE',
-                          headers: {
-                            'Authorization': `Bearer ${token}`
-                          }
-                        });
-
-                        if (response.ok) {
-                          setUserAbuseHistory([]);
-                          toast({
-                            title: "History Cleared",
-                            description: "Your abuse history has been successfully cleared.",
-                            variant: "success"
-                          });
-                        } else {
-                          throw new Error('Failed to clear history');
-                        }
-                      } catch (error) {
-                        console.error('Error clearing history:', error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to clear history. Please try again.",
-                          variant: "destructive"
-                        });
-                      }
-                    }
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear History
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="hover-scale"
-                  onClick={() => {
-                    try {
-                      const data = userAbuseHistory.map(report => ({
-                        platform: report.platform,
-                        content: report.content,
-                        reason: report.reason,
-                        status: report.status,
-                        date: new Date(report.timestamp).toLocaleDateString()
-                      }));
-                      
-                      const csvContent = "data:text/csv;charset=utf-8," + 
-                        "Platform,Content,Reason,Status,Date\n" +
-                        data.map(row => Object.values(row).join(",")).join("\n");
-                      
-                      const encodedUri = encodeURI(csvContent);
-                      const link = document.createElement("a");
-                      link.setAttribute("href", encodedUri);
-                      link.setAttribute("download", "abuse_history.csv");
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-
-                      toast({
-                        title: "Export Successful",
-                        description: "Your data has been exported to 'abuse_history.csv'",
-                        variant: "success"
-                      });
-                    } catch (error) {
-                      console.error('Error exporting data:', error);
-                      toast({
-                        title: "Export Failed",
-                        description: "Failed to export data. Please try again.",
-                        variant: "destructive"
-                      });
-                    }
-                  }}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Data
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto rounded-xl border border-border/50">
-              <table className="w-full">
+          {userAbuseHistory.length === 0 ? (
+            <div className="py-16 text-center">
+              <Shield className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No reports yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Install the extension to start tracking</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="ta-table">
                 <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    <th className="text-left py-4 px-4 font-semibold text-sm text-foreground">Platform</th>
-                    <th className="text-left py-4 px-4 font-semibold text-sm text-foreground">Original Content</th>
-                    <th className="text-left py-4 px-4 font-semibold text-sm text-foreground">Reason</th>
-                    <th className="text-left py-4 px-4 font-semibold text-sm text-foreground">Status</th>
-                    <th className="text-left py-4 px-4 font-semibold text-sm text-foreground">Date</th>
+                  <tr>
+                    <th>Platform</th>
+                    <th>Content</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[...userAbuseHistory, ...extensionStats.extensionActivity].map((report, index) => (
-                    <tr key={report.id || `extension-${index}`} className="border-b border-border/50 hover:bg-primary/5 transition-smooth cursor-pointer group" onClick={() => alert(`Original: ${report.content}\nReason: ${report.reason}`)}>
-                      <td className="py-4 px-4">
-                        <span className="font-medium text-foreground group-hover:text-primary transition-colors">{report.platform || 'Extension'}</span>
-                      </td>
-                      <td className="py-4 px-4 max-w-xs">
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {report.content.replace(/.(?=.{4,}$)/g, '*')}
+                  {userAbuseHistory.map((r, idx) => (
+                    <tr key={r.id || idx}>
+                      <td className="font-medium text-foreground">{r.platform || 'Extension'}</td>
+                      <td className="max-w-xs">
+                        <p className="text-muted-foreground truncate text-xs">
+                          {(r.content || '').replace(/.(?=.{4,}$)/g, '•')}
                         </p>
                       </td>
-                      <td className="py-4 px-4">
-                        <span className="text-xs bg-danger/20 text-danger px-3 py-1.5 rounded-full font-medium">
-                          {report.reason}
-                        </span>
+                      <td>
+                        <span className="badge-danger text-xs">{r.reason || '—'}</span>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className={`flex items-center space-x-2 ${getStatusColor(report.status)}`}>
-                          {getStatusIcon(report.status)}
-                          <span className="text-sm font-medium">{report.status}</span>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <StatusIcon status={r.status} />
+                          <StatusBadge status={r.status || 'Pending'} />
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-sm text-muted-foreground">
-                        {new Date(report.timestamp).toLocaleDateString()}
+                      <td className="text-xs text-muted-foreground tab-nums">
+                        {r.timestamp ? new Date(r.timestamp).toLocaleDateString() : '—'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
-
     </div>
   );
 };

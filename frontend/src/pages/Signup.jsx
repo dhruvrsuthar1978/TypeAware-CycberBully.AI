@@ -1,290 +1,273 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle } from 'lucide-react';
+import { Shield, Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-const Signup = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState([]);
-  
-  const { signup } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+const pwRules = [
+  { label: 'At least 8 characters',       test: (p) => p.length >= 8 },
+  { label: 'One uppercase letter (A–Z)',   test: (p) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter (a–z)',   test: (p) => /[a-z]/.test(p) },
+  { label: 'Three or more digits (0–9)',   test: (p) => /\d{3,}/.test(p) },
+  { label: 'One special character (!@#$)', test: (p) => /[!@#$%^&*]/.test(p) },
+];
 
-  const validatePassword = (password) => {
-    const errors = [];
-    if (password.length < 8) {
-      errors.push("At least 8 characters long");
-    }
-    if (!/[A-Z]/.test(password)) {
-      errors.push("At least one uppercase letter (A-Z)");
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push("At least one lowercase letter (a-z)");
-    }
-    if (!/\d{3,}/.test(password)) {
-      errors.push("At least three numbers (0-9)");
-    }
-    if (!/[!@#$%^&*]/.test(password)) {
-      errors.push("At least one special character (!@#$%^&*)");
-    }
-    return errors;
-  };
+const Signup = () => {
+  const [form, setForm]           = useState({ name: '', email: '', password: '', confirm: '' });
+  const [showPw, setShowPw]       = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signup } = useAuth();
+  const navigate   = useNavigate();
+  const { toast }  = useToast();
+
+  const failed   = pwRules.filter((r) => !r.test(form.password));
+  const strength = Math.round(((pwRules.length - failed.length) / pwRules.length) * 100);
+  const strengthColor =
+    strength < 40 ? 'bg-danger' : strength < 80 ? 'bg-warning' : 'bg-security';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const errors = validatePassword(formData.password);
-    if (errors.length > 0) {
-      setPasswordErrors(errors);
-      toast({
-        variant: "destructive",
-        title: "Password requirements not met",
-        description: "Please check the password requirements below."
-      });
+    if (failed.length > 0) {
+      toast({ variant: 'destructive', title: 'Weak password', description: 'Please meet all requirements.' });
       return;
     }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Password mismatch",
-        description: "Please make sure your passwords match."
-      });
+    if (form.password !== form.confirm) {
+      toast({ variant: 'destructive', title: 'Passwords do not match' });
       return;
     }
-
     setIsLoading(true);
-
-    const result = await signup(formData.name, formData.email, formData.password);
-
+    const result = await signup(form.name, form.email, form.password);
     if (result.success) {
-      toast({
-        title: "Account created successfully!",
-        description: "Welcome to TypeAware. You've been automatically signed in."
-      });
+      toast({ title: 'Account created!', description: 'Welcome to TypeAware.' });
       navigate('/dashboard');
     } else {
-      toast({
-        variant: "destructive",
-        title: "Signup failed",
-        description: result.error || "Please try again."
-      });
+      toast({ variant: 'destructive', title: 'Signup failed', description: result.error });
     }
-
     setIsLoading(false);
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Aurora Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-aurora"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/20"></div>
-      
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 bg-pattern-dots opacity-20"></div>
-      
-      {/* Floating Elements */}
-      <div className="absolute top-20 left-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
-      <div className="absolute bottom-20 right-10 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
-      <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
+    <div className="min-h-screen flex bg-background">
+      {/* ── Left branding ─────────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-5/12 flex-col relative overflow-hidden bg-card border-r border-border">
+        <div className="absolute inset-0 bg-grid-dark" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/8 rounded-full blur-3xl" />
 
-      <div className="relative min-h-screen flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="text-center mb-8 animate-fade-in">
-            <div className="flex justify-center mb-6">
-              <div className="relative group">
-                <Shield className="h-16 w-16 text-white relative z-10 group-hover:scale-110 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-white/40 rounded-full blur-2xl animate-pulse-glow"></div>
-              </div>
+        <div className="relative z-10 flex flex-col h-full p-12">
+          <Link to="/" className="flex items-center gap-2.5 group mb-auto">
+            <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
+              <Shield className="h-4.5 w-4.5 text-primary" strokeWidth={2.5} />
             </div>
-            <h1 className="text-4xl font-display font-bold text-white mb-3">Create Account</h1>
-            <p className="text-white/90 text-lg">Join TypeAware and start protecting your community</p>
+            <span className="font-bold text-lg text-foreground">TypeAware</span>
+          </Link>
+
+          <div className="my-auto">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-security/10 border border-security/25 text-security text-xs font-semibold mb-6">
+              <CheckCircle className="h-3.5 w-3.5" />
+              Free Forever Plan
+            </div>
+            <h2 className="text-3xl font-bold text-foreground mb-3 leading-tight">
+              Join TypeAware.<br />Browse safely.
+            </h2>
+            <p className="text-muted-foreground mb-8 leading-relaxed text-sm">
+              Create your free account and start detecting harmful content across all your platforms in minutes.
+            </p>
+
+            <div className="space-y-2.5">
+              {[
+                { label: 'No credit card required',        color: 'text-security' },
+                { label: '5-minute setup',                 color: 'text-primary' },
+                { label: 'Works on 9+ major platforms',    color: 'text-accent' },
+                { label: 'Privacy-first architecture',     color: 'text-warning' },
+              ].map((f) => (
+                <div key={f.label} className="flex items-center gap-3">
+                  <CheckCircle className={`h-4 w-4 flex-shrink-0 ${f.color}`} />
+                  <span className="text-sm text-muted-foreground">{f.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Signup Form */}
-          <Card className="glass-card-strong border-white/30 shadow-dramatic hover-lift overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <CardContent className="p-8 relative z-10">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Name */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">Full Name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 border-border/50 rounded-xl bg-background/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                      placeholder="Enter your full name"
-                      required
-                    />
-                  </div>
+          <p className="text-xs text-muted-foreground mt-auto">© {new Date().getFullYear()} TypeAware</p>
+        </div>
+      </div>
+
+      {/* ── Form panel ────────────────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 relative overflow-y-auto">
+        <div className="absolute inset-0 bg-dot-dark opacity-40" />
+
+        <div className="w-full max-w-md relative z-10">
+          {/* Mobile logo */}
+          <Link to="/" className="flex items-center gap-2.5 mb-8 lg:hidden w-fit">
+            <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center">
+              <Shield className="h-4 w-4 text-primary" strokeWidth={2.5} />
+            </div>
+            <span className="font-bold text-foreground">TypeAware</span>
+          </Link>
+
+          <h1 className="text-2xl font-bold text-foreground mb-1">Create account</h1>
+          <p className="text-sm text-muted-foreground mb-8">
+            Already registered?{' '}
+            <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link>
+          </p>
+
+          <div className="ta-card p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    className="ta-input pl-10"
+                    placeholder="Jane Smith"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    className="ta-input pl-10"
+                    placeholder="you@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    className="ta-input pl-10 pr-10"
+                    placeholder="Create a strong password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
 
-                {/* Email */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="w-full pl-12 pr-4 py-3 border-2 border-border/50 rounded-xl bg-background/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={formData.password}
-                      onChange={(e) => {
-                        handleChange(e);
-                        setPasswordErrors(validatePassword(e.target.value));
-                      }}
-                      className="w-full pl-12 pr-14 py-3 border-2 border-border/50 rounded-xl bg-background/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                      placeholder="Create a password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  {/* Password Requirements */}
-                  <div className="text-xs space-y-1">
-                    <p className="font-semibold text-foreground">Password Requirements:</p>
-                    <ul className="text-muted-foreground space-y-0.5">
-                      <li className={`flex items-center gap-1 ${formData.password.length >= 8 ? 'text-green-600' : ''}`}>
-                        <span className="w-1 h-1 bg-current rounded-full"></span>
-                        At least 8 characters long
-                      </li>
-                      <li className={`flex items-center gap-1 ${/[A-Z]/.test(formData.password) ? 'text-green-600' : ''}`}>
-                        <span className="w-1 h-1 bg-current rounded-full"></span>
-                        At least one uppercase letter (A-Z)
-                      </li>
-                      <li className={`flex items-center gap-1 ${/[a-z]/.test(formData.password) ? 'text-green-600' : ''}`}>
-                        <span className="w-1 h-1 bg-current rounded-full"></span>
-                        At least one lowercase letter (a-z)
-                      </li>
-                      <li className={`flex items-center gap-1 ${/\d{3,}/.test(formData.password) ? 'text-green-600' : ''}`}>
-                        <span className="w-1 h-1 bg-current rounded-full"></span>
-                        At least three numbers (0-9)
-                      </li>
-                      <li className={`flex items-center gap-1 ${/[!@#$%^&*]/.test(formData.password) ? 'text-green-600' : ''}`}>
-                        <span className="w-1 h-1 bg-current rounded-full"></span>
-                        At least one special character (!@#$%^&*)
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Confirm Password */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">Confirm Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      className="w-full pl-12 pr-14 py-3 border-2 border-border/50 rounded-xl bg-background/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                      placeholder="Confirm your password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Submit */}
-                <Button 
-                  type="submit" 
-                  className="w-full bg-gradient-primary hover:opacity-90 transition-opacity shadow-lg hover-scale text-lg py-6 rounded-xl" 
-                  size="lg"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Creating Account...
+                {form.password && (
+                  <div className="space-y-2 mt-2">
+                    {/* Strength bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-400 ${strengthColor}`}
+                          style={{ width: `${strength}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-8 text-right">{strength}%</span>
                     </div>
-                  ) : (
-                    <>
-                      <UserPlus className="mr-2 h-5 w-5" />
-                      Create Account
-                    </>
-                  )}
-                </Button>
-              </form>
-
-              {/* Links */}
-              <div className="mt-6 text-center space-y-3">
-                <p className="text-sm text-foreground">
-                  Already have an account?{' '}
-                  <Link to="/login" className="text-primary hover:text-primary/80 font-semibold hover:underline">
-                    Sign in
-                  </Link>
-                </p>
-                <Link to="/" className="text-sm text-muted-foreground hover:text-foreground block transition-colors">
-                  ← Back to Home
-                </Link>
+                    {/* Rules */}
+                    <div className="grid grid-cols-2 gap-1">
+                      {pwRules.map((rule, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-1.5 text-xs ${
+                            rule.test(form.password) ? 'text-security' : 'text-muted-foreground'
+                          }`}
+                        >
+                          <CheckCircle
+                            className={`h-3 w-3 flex-shrink-0 ${
+                              rule.test(form.password) ? 'text-security' : 'text-muted-foreground/40'
+                            }`}
+                          />
+                          {rule.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Security Notice */}
-          <Card className="mt-6 glass-card border-white/20 hover-lift">
-            <CardContent className="p-4">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-foreground">
-                  <p className="font-semibold mb-1">🔒 Privacy & Security</p>
-                  <p className="text-muted-foreground">Your data is encrypted and secure. By signing up, you agree to our Terms of Service and Privacy Policy.</p>
+              {/* Confirm password */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    name="confirm"
+                    value={form.confirm}
+                    onChange={handleChange}
+                    className={`ta-input pl-10 pr-10 ${
+                      form.confirm && form.password !== form.confirm
+                        ? 'border-danger/50 focus:border-danger/70'
+                        : ''
+                    }`}
+                    placeholder="Repeat your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
+                {form.confirm && form.password !== form.confirm && (
+                  <p className="text-xs text-danger">Passwords do not match</p>
+                )}
               </div>
-            </CardContent>
-          </Card>
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creating account…
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Create Free Account
+                  </span>
+                )}
+              </Button>
+            </form>
+          </div>
+
+          <p className="mt-4 text-xs text-muted-foreground text-center px-4">
+            By signing up you agree to our{' '}
+            <Link to="/terms-of-service" className="text-primary hover:underline">Terms</Link>
+            {' '}and{' '}
+            <Link to="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>.
+          </p>
+
+          <div className="mt-4 text-center">
+            <Link to="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              ← Back to home
+            </Link>
+          </div>
         </div>
       </div>
     </div>

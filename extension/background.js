@@ -1,18 +1,20 @@
-// Backend API configuration
-const BACKEND_URL = 'http://localhost:5000'; // Change this to your production URL
+// TypeAware Background Service Worker v2.1
 
-// Initialize extension on install
+const BACKEND_URL = 'http://localhost:8010';
+
 chrome.runtime.onInstalled.addListener(async () => {
-  // Initialize default storage
-  const data = await chrome.storage.local.get(['stats', 'enabled', 'userUuid', 'apiKey']);
+  const data = await chrome.storage.local.get([
+    'stats',
+    'enabled',
+    'userUuid',
+    'detections',
+    'settings',
+    'version',
+  ]);
 
   if (!data.stats) {
     await chrome.storage.local.set({
-      stats: {
-        totalScanned: 0,
-        threatsDetected: 0,
-        reportsSubmitted: 0
-      }
+      stats: { totalScanned: 0, threatsDetected: 0, reportsSubmitted: 0 },
     });
   }
 
@@ -20,179 +22,264 @@ chrome.runtime.onInstalled.addListener(async () => {
     await chrome.storage.local.set({ enabled: true });
   }
 
-  // Initialize detections array if needed
-  const detData = await chrome.storage.local.get(['detections']);
-  if (!detData.detections) {
+  if (!data.detections) {
     await chrome.storage.local.set({ detections: [] });
   }
 
-  // Generate user UUID if not exists
   if (!data.userUuid) {
-    const userUuid = generateUserUuid();
-    await chrome.storage.local.set({ userUuid });
+    await chrome.storage.local.set({ userUuid: generateUuid() });
   }
+
+  if (!data.settings) {
+    await chrome.storage.local.set({
+      settings: {
+        sensitivity: 2,
+        showHighlights: true,
+        aiAnalysis: true,
+        autoReport: false,
+        notifications: false,
+        blockHighSeverity: true,
+      },
+    });
+  }
+
+  await chrome.storage.local.set({ version: chrome.runtime.getManifest().version });
 });
 
-// Listen for messages from content scripts and popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'updateStats') {
-    updateStats(request.data).then(() => {
-      sendResponse({ success: true });
-    });
-    return true;
-  }
+chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
+  (async () => {
+    switch (req.action) {
+      case 'updateStats':
+        await updateStats(req.data || {});
+        return { success: true };
 
-  if (request.action === 'addDetection') {
-    addDetection(request.detection).then(() => {
-      sendResponse({ success: true });
-    });
-    return true;
-  }
+      case 'addDetection':
+        await addDetection(req.detection || {});
+        return { success: true };
 
-  if (request.action === 'getStats') {
-    chrome.storage.local.get(['stats'], (result) => {
-      sendResponse({ stats: result.stats });
-    });
-    return true;
-  }
+      case 'getStats': {
+        const r = await chrome.storage.local.get(['stats']);
+        return { stats: r.stats };
+      }
 
-  if (request.action === 'analyzeContent') {
-    analyzeContentWithAI(request.content, request.context).then((result) => {
-      sendResponse({ result });
-    });
-    return true;
-  }
+      case 'getSettings': {
+        const r = await chrome.storage.local.get(['settings']);
+        return { settings: r.settings };
+      }
 
-  if (request.action === 'submitReport') {
-    submitReportToBackend(request.reportData).then((result) => {
-      sendResponse({ result });
+      case 'pingBackend': {
+        const ok = await pingBackend();
+        return { ok };
+      }
+
+      case 'analyzeContent': {
+        const result = await analyzeContentWithAI(req.content, req.context || {});
+        return { result };
+      }
+
+      case 'rephraseContent': {
+        const result = await getRephraseSuggestions(req.content);
+        return { result };
+      }
+
+      case 'screenMessage': {
+        const result = await screenMessage(req.content, req.context || {});
+        return { result };
+      }
+
+      case 'submitReport': {
+        const result = await submitReportToBackend(req.reportData || {});
+        return { result };
+      }
+
+      case 'notify':
+        showNotification(req.message);
+        return { success: true };
+
+      default:
+        return { success: false, error: 'Unknown action.' };
+    }
+  })()
+    .then((result) => sendResponse(result))
+    .catch((err) => {
+      console.warn('[TypeAware] background error:', err?.message || err);
+      sendResponse({ success: false, error: err?.message || 'Unknown background error.' });
     });
-    return true;
-  }
+
+  return true;
 });
 
-// Update stats
 async function updateStats(updates) {
-  const result = await chrome.storage.local.get(['stats']);
-  const stats = result.stats || { totalScanned: 0, threatsDetected: 0, reportsSubmitted: 0 };
+  const { stats = { totalScanned: 0, threatsDetected: 0, reportsSubmitted: 0 } } =
+    await chrome.storage.local.get(['stats']);
 
-  stats.totalScanned += updates.totalScanned || 0;
-  stats.threatsDetected += updates.threatsDetected || 0;
-  stats.reportsSubmitted += updates.reportsSubmitted || 0;
+  stats.totalScanned += Number(updates.totalScanned || 0);
+  stats.threatsDetected += Number(updates.threatsDetected || 0);
+  stats.reportsSubmitted += Number(updates.reportsSubmitted || 0);
 
   await chrome.storage.local.set({ stats });
 }
 
-// Add detection to history
 async function addDetection(detection) {
-  const result = await chrome.storage.local.get(['detections']);
-  let detections = result.detections || [];
-
+  let { detections = [] } = await chrome.storage.local.get(['detections']);
   detections.unshift(detection);
-
-  // Keep only last 100 detections
-  if (detections.length > 100) {
-    detections = detections.slice(0, 100);
-  }
-
+  if (detections.length > 100) detections = detections.slice(0, 100);
   await chrome.storage.local.set({ detections });
 }
 
-// Generate unique user UUID
-function generateUserUuid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
+function showNotification(message) {
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icons/icon48.png',
+    title: 'TypeAware Alert',
+    message: message || 'Harmful content detected on this page.',
+    priority: 2,
   });
 }
 
-// API communication functions
-async function analyzeContentWithAI(content, context = {}) {
+async function pingBackend() {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/ai/analyze`, {
+    const res = await fetch(`${BACKEND_URL}/api/health`, { method: 'GET' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function analyzeContentWithAI(content, context = {}) {
+  if (!content || !String(content).trim()) return null;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/ai/analyze`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content,
         context: {
           ...context,
           source: 'extension',
-          platform: getPlatformFromUrl(context.url)
-        }
-      })
+          platform: getPlatformFromUrl(context.url),
+        },
+      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`AI analysis failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.data;
-  } catch (error) {
-    console.error('AI analysis error:', error);
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.warn('[TypeAware] AI analysis error:', err?.message || err);
     return null;
+  }
+}
+
+async function getRephraseSuggestions(content) {
+  if (!content || !String(content).trim()) return [];
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/ai/rephrase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: content }),
+    });
+
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const json = await res.json();
+    const suggestions = json?.data?.suggestions || [];
+    return suggestions.map((s) => s.suggested_text).filter(Boolean);
+  } catch (err) {
+    console.warn('[TypeAware] rephrase error:', err?.message || err);
+    return [];
+  }
+}
+
+async function screenMessage(content, context = {}) {
+  if (!content || !String(content).trim()) {
+    return {
+      accepted: true,
+      moderation: { flagged: false, severity: 'none', message: 'No content' },
+      user_state: null,
+      suggestion: '',
+      rephrases: [],
+    };
+  }
+
+  try {
+    const { userUuid } = await chrome.storage.local.get(['userUuid']);
+    const res = await fetch(`${BACKEND_URL}/api/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author_id: userUuid, text: content }),
+    });
+
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const json = await res.json();
+
+    const rephrases = json?.moderation?.flagged
+      ? await getRephraseSuggestions(content)
+      : [];
+
+    return {
+      ...json,
+      rephrases,
+      context,
+    };
+  } catch (err) {
+    console.warn('[TypeAware] message screening error:', err?.message || err);
+    return {
+      accepted: true,
+      moderation: { flagged: false, severity: 'none', message: 'Screening unavailable' },
+      user_state: null,
+      suggestion: '',
+      rephrases: [],
+    };
   }
 }
 
 async function submitReportToBackend(reportData) {
   try {
     const { userUuid } = await chrome.storage.local.get(['userUuid']);
+    const manifest = chrome.runtime.getManifest();
 
-    const response = await fetch(`${BACKEND_URL}/api/extension/reports`, {
+    const res = await fetch(`${BACKEND_URL}/api/extension/reports`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-extension-id': chrome.runtime.id,
-        'x-extension-version': chrome.runtime.getManifest().version,
-        'x-user-uuid': userUuid
+        'x-extension-version': manifest.version,
+        'x-user-uuid': userUuid,
       },
-      body: JSON.stringify(reportData)
+      body: JSON.stringify(reportData),
     });
 
-    if (!response.ok) {
-      throw new Error(`Report submission failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.data;
-  } catch (error) {
-    console.error('Report submission error:', error);
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const json = await res.json();
+    await updateStats({ reportsSubmitted: 1 });
+    return json.data || null;
+  } catch (err) {
+    console.warn('[TypeAware] report submission error:', err?.message || err);
     return null;
   }
 }
 
-async function pingBackend() {
-  try {
-    const { userUuid } = await chrome.storage.local.get(['userUuid']);
-
-    const response = await fetch(`${BACKEND_URL}/api/extension/ping`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-extension-id': chrome.runtime.id,
-        'x-extension-version': chrome.runtime.getManifest().version,
-        'x-user-uuid': userUuid
-      }
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error('Backend ping error:', error);
-    return false;
-  }
+function generateUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
 }
 
 function getPlatformFromUrl(url) {
   if (!url) return 'web';
-  const hostname = new URL(url).hostname.toLowerCase();
-  if (hostname.includes('twitter') || hostname.includes('x.com')) return 'twitter';
-  if (hostname.includes('reddit')) return 'reddit';
-  if (hostname.includes('youtube')) return 'youtube';
-  if (hostname.includes('facebook')) return 'facebook';
-  if (hostname.includes('instagram')) return 'instagram';
-  if (hostname.includes('tiktok')) return 'tiktok';
+  try {
+    const h = new URL(url).hostname.toLowerCase();
+    if (h.includes('twitter') || h.includes('x.com')) return 'twitter';
+    if (h.includes('reddit')) return 'reddit';
+    if (h.includes('youtube')) return 'youtube';
+    if (h.includes('facebook')) return 'facebook';
+    if (h.includes('instagram')) return 'instagram';
+    if (h.includes('tiktok')) return 'tiktok';
+  } catch {
+    // ignore invalid URL
+  }
   return 'web';
 }

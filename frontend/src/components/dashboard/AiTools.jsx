@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { TestTube, Zap, Sparkles } from 'lucide-react';
+import { API_BASE_URL } from '@/utils/config';
 
 const AiTools = () => {
   const [testText, setTestText] = useState('');
@@ -19,7 +20,7 @@ const AiTools = () => {
     setTesting(true);
     try {
       // Call real AI analysis API
-      const analyzeResponse = await fetch('http://localhost:5000/api/ai/analyze', {
+      const analyzeResponse = await fetch(`${API_BASE_URL}/ai/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,7 +35,7 @@ const AiTools = () => {
       const analyzeData = await analyzeResponse.json();
 
       // Call rephrase suggestions API
-      const rephraseResponse = await fetch('http://localhost:5000/api/ai/rephrase', {
+      const rephraseResponse = await fetch(`${API_BASE_URL}/ai/rephrase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,8 +45,11 @@ const AiTools = () => {
 
       let rephraseData = [];
       if (rephraseResponse.ok) {
-        const rephraseResult = await rephraseResponse.json();
-        rephraseData = rephraseResult.suggestions || rephraseResult.data?.suggestions || [];
+          const rephraseResult = await rephraseResponse.json();
+          rephraseData =
+            rephraseResult.suggestions ||
+            (rephraseResult.data?.suggestions || []).map((s) => s.suggested_text) ||
+            [];
       }
 
       setAiResults(analyzeData);
